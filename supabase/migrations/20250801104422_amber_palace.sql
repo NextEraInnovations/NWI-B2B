@@ -1,0 +1,2 @@
+-- Remove this file as we don't want sample data for live testing
+-- The database will start clean and users can add their own data
