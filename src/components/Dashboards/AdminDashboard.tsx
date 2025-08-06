@@ -36,7 +36,10 @@ import {
   Phone,
   MapPin,
   Star,
-  UserPlus
+  UserPlus,
+  Truck,
+  Store,
+  RotateCcw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { UserRegistrationForm } from '../UserManagement/UserRegistrationForm';
@@ -44,8 +47,7 @@ import { User as UserType, Order, Promotion, PendingUser, WholesalerAnalytics } 
 
 interface AdminDashboardProps {
   activeTab: string;
-  Truck,
-  Store
+}
 
 export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const { state, dispatch } = useApp();
@@ -276,6 +278,20 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       } 
     });
     alert('User application rejected.');
+  };
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Add user logic here
+    setShowAddUser(false);
+    setNewUser({
+      name: '',
+      email: '',
+      role: 'retailer',
+      businessName: '',
+      phone: '',
+      address: ''
+    });
   };
 
   const renderOverview = () => (
@@ -579,8 +595,11 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                 </button>
                 <button
                   onClick={() => {
-                    handleRejectUser(selectedPendingUser.id);
-                    setSelectedPendingUser(null);
+                    const reason = prompt('Rejection reason:');
+                    if (reason) {
+                      handleRejectUser(selectedPendingUser.id, reason);
+                      setSelectedPendingUser(null);
+                    }
                   }}
                   className="flex-1 bg-red-50 text-red-600 px-4 py-3 rounded-xl hover:bg-red-100 transition-colors font-medium flex items-center justify-center gap-2"
                 >
@@ -648,7 +667,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-blue-100 text-blue-800'
                       }`}>
-                        🏭 {pendingUser.role === 'wholesaler' ? 'Wholesaler' : '🏪 Retailer'}
+                        {pendingUser.role === 'wholesaler' ? '🏭 Wholesaler' : '🏪 Retailer'}
                       </span>
                     </div>
                     
