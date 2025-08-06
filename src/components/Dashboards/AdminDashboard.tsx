@@ -44,7 +44,8 @@ import { User as UserType, Order, Promotion, PendingUser, WholesalerAnalytics } 
 
 interface AdminDashboardProps {
   activeTab: string;
-}
+  Truck,
+  Store
 
 export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const { state, dispatch } = useApp();
