@@ -1,19 +1,12 @@
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User, Product, Order, OrderItem, SupportTicket, Promotion, ReturnRequest, ReturnItem, PendingUser } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export class SupabaseService {
-  // Check if Supabase is configured
-  private static isConfigured(): boolean {
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    return !!(url && key && url !== 'https://demo.supabase.co' && key !== 'demo-key');
-  }
-
   // Handle errors gracefully
   private static handleError(error: any, operation: string) {
     console.error(`Supabase ${operation} error:`, error);
-    if (!this.isConfigured()) {
+    if (!isSupabaseConfigured) {
       console.warn('Supabase not configured. Data changes will only persist in memory.');
       return;
     }
@@ -22,9 +15,9 @@ export class SupabaseService {
 
   // User operations
   static async createUser(user: Omit<User, 'id' | 'createdAt'>) {
-    if (!this.isConfigured()) {
+    if (!isSupabaseConfigured) {
       console.warn('Supabase not configured. User creation skipped.');
-      return user as User;
+      return { ...user, id: uuidv4(), createdAt: new Date().toISOString() } as User;
     }
 
     const { data, error } = await supabase

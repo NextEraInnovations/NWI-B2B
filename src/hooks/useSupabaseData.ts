@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User, Product, Order, SupportTicket, Promotion, ReturnRequest, PendingUser } from '../types';
 
 export function useSupabaseData() {
@@ -141,7 +141,7 @@ export function useSupabaseData() {
       setError(null);
 
       // Check if Supabase is properly configured
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      if (!isSupabaseConfigured) {
         console.warn('Supabase not configured. Using demo data.');
         setLoading(false);
         return;

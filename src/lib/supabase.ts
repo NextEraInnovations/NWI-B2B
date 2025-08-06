@@ -3,13 +3,38 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && 
+  supabaseUrl !== 'https://demo.supabase.co' && 
+  supabaseAnonKey !== 'demo-key');
+
+if (!isSupabaseConfigured) {
   console.warn('Supabase environment variables not found. Using demo mode.');
 }
 
-export const supabase: SupabaseClient = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : createClient('https://demo.supabase.co', 'demo-key');
+// Create a mock client for demo mode
+const createMockClient = () => ({
+  from: () => ({
+    select: () => Promise.resolve({ data: [], error: null }),
+    insert: () => Promise.resolve({ data: null, error: null }),
+    update: () => Promise.resolve({ data: null, error: null }),
+    delete: () => Promise.resolve({ error: null }),
+    upsert: () => Promise.resolve({ error: null }),
+    eq: function() { return this; },
+    single: function() { return this; },
+    order: function() { return this; }
+  }),
+  channel: () => ({
+    on: function() { return this; },
+    subscribe: () => {}
+  }),
+  removeChannel: () => {}
+});
+
+export const supabase: SupabaseClient = isSupabaseConfigured 
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
+  : createMockClient() as any;
+
+export { isSupabaseConfigured };
 
 // Database types
 export interface Database {
