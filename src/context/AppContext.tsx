@@ -376,8 +376,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       
       return {
         ...state,
-        pendingUsers: [...state.pendingUsers, action.payload],
-        notifications: [...state.notifications, adminNotification]
         notifications: [...state.notifications, ticketUpdateNotification]
       };
     case 'ADD_PROMOTION':
