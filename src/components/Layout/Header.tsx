@@ -28,8 +28,9 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
       // Show notifications for current user, or role-based notifications
       return notification.userId === currentUser.id || 
              (notification.userId === 'admin' && currentUser.role === 'admin') ||
-             (notification.userId === 'support' && currentUser.role === 'support') ||
-             notification.userId === 'system';
+             (notification.userId === 'support' && (currentUser.role === 'support' || currentUser.role === 'admin')) ||
+             (notification.userId === 'system') ||
+             (notification.userId === 'all');
     });
     
     // Sort by priority and creation date
@@ -49,7 +50,7 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
     return sortedNotifications.map(notification => ({
       id: notification.id,
       message: notification.message,
-      time: new Date(notification.createdAt).toLocaleTimeString(),
+      time: new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: notification.type,
       priority: notification.priority,
       read: notification.read,
@@ -171,6 +172,8 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                             }`}></div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs sm:text-sm font-bold text-gray-900 mb-1">
+                            notification.type === 'product' ? 'bg-indigo-500' :
+                            notification.type === 'system' ? 'bg-gray-500' :
                                 {notification.title}
                               </p>
                               <p className="text-xs sm:text-sm text-gray-900 font-semibold leading-4 sm:leading-5 break-words">
@@ -187,6 +190,11 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                             </div>
                             {!notification.read && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
+                            )}
+                            {notification.priority === 'high' && (
+                              <span className="inline-block mt-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded-full">
+                                HIGH
+                              </span>
                             )}
                           </div>
                         </div>

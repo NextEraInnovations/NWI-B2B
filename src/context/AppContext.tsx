@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import { useEffect } from 'react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { SupabaseService } from '../services/supabaseService';
 import { User, Product, Order, SupportTicket, Promotion, Analytics, ReturnRequest, PendingUser, WholesalerAnalytics } from '../types';
@@ -46,6 +47,7 @@ interface AppState {
 type AppAction = 
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'ADD_USER'; payload: User }
+  | { type: 'SET_INITIAL_DATA'; payload: { users: User[]; products: Product[]; orders: Order[]; tickets: SupportTicket[]; promotions: Promotion[]; returnRequests: ReturnRequest[]; pendingUsers: PendingUser[] } }
   | { type: 'ADD_PENDING_USER'; payload: PendingUser }
   | { type: 'APPROVE_USER'; payload: { pendingUserId: string; adminId: string } }
   | { type: 'REJECT_USER'; payload: { pendingUserId: string; adminId: string; reason: string } }
@@ -195,6 +197,17 @@ function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_USER':
       return { ...state, currentUser: action.payload };
+    case 'SET_INITIAL_DATA':
+      return {
+        ...state,
+        users: action.payload.users.length > 0 ? action.payload.users : state.users,
+        products: action.payload.products.length > 0 ? action.payload.products : state.products,
+        orders: action.payload.orders.length > 0 ? action.payload.orders : state.orders,
+        tickets: action.payload.tickets.length > 0 ? action.payload.tickets : state.tickets,
+        promotions: action.payload.promotions.length > 0 ? action.payload.promotions : state.promotions,
+        returnRequests: action.payload.returnRequests.length > 0 ? action.payload.returnRequests : state.returnRequests,
+        pendingUsers: action.payload.pendingUsers.length > 0 ? action.payload.pendingUsers : state.pendingUsers
+      };
     case 'ADD_USER':
       return { ...state, users: [...state.users, action.payload] };
     case 'ADD_PENDING_USER':
@@ -209,7 +222,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         read: false,
         priority: 'high' as const,
         createdAt: new Date().toISOString()
-      };
+        pendingUsers: [...state.pendingUsers, action.payload],
+        notifications: [...state.notifications, adminNotification]
       return { ...state, pendingUsers: [...state.pendingUsers, action.payload] };
     case 'APPROVE_USER':
       const pendingUser = state.pendingUsers.find(u => u.id === action.payload.pendingUserId);
@@ -275,11 +289,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         pendingUsers: state.pendingUsers.filter(u => u.id !== action.payload.pendingUserId)
       };
     case 'UPDATE_PLATFORM_SETTINGS':
-      return { 
-        ...state, 
-        pendingUsers: [...state.pendingUsers, action.payload],
-        notifications: [...state.notifications, adminNotification]
-      };
+      return { ...state, platformSettings: { ...state.platformSettings, ...action.payload } };
     case 'BULK_VERIFY_USERS':
       return {
         ...state,
@@ -610,7 +620,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         notifications: state.notifications.map(n => 
-          n.userId === action.payload || n.userId === 'admin' || n.userId === 'support' 
+          n.userId === action.payload || 
+          (n.userId === 'admin' && state.currentUser?.role === 'admin') ||
+          (n.userId === 'support' && state.currentUser?.role === 'support') ||
+          n.userId === 'system'
             ? { ...n, read: true } 
             : n
         )
@@ -624,6 +637,228 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return state;
   }
 }
+
+// Notification generator functions
+const createNotification = (
+  userId: string,
+  type: Notification['type'],
+  title: string,
+  message: string,
+  priority: Notification['priority'] = 'medium',
+  data?: any
+): Notification => ({
+  id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  userId,
+  type,
+  title,
+  message,
+  data,
+  read: false,
+  priority,
+  createdAt: new Date().toISOString()
+});
+
+// Live notification system
+const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppAction>) => {
+  useEffect(() => {
+    // Generate notifications for new orders
+    const generateOrderNotifications = (order: Order) => {
+      const wholesaler = state.users.find(u => u.id === order.wholesalerId);
+      const retailer = state.users.find(u => u.id === order.retailerId);
+      
+      if (wholesaler) {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: createNotification(
+            order.wholesalerId,
+            'order',
+            'New Order Received! 🛒',
+            `${retailer?.name || 'A retailer'} placed an order worth R${order.total.toLocaleString()}`,
+            'high',
+            { orderId: order.id, retailerName: retailer?.name, total: order.total }
+          )
+        });
+      }
+      
+      // Notify admins about new orders
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: createNotification(
+          'admin',
+          'order',
+          'New Platform Order',
+          `Order #${order.id} placed by ${retailer?.name} for R${order.total.toLocaleString()}`,
+          'medium',
+          { orderId: order.id, retailerName: retailer?.name, wholesalerName: wholesaler?.name }
+        )
+      });
+    };
+
+    // Generate notifications for order status changes
+    const generateOrderStatusNotifications = (order: Order, previousStatus?: string) => {
+      if (previousStatus && previousStatus !== order.status) {
+        const retailer = state.users.find(u => u.id === order.retailerId);
+        const wholesaler = state.users.find(u => u.id === order.wholesalerId);
+        
+        let title = '';
+        let message = '';
+        let priority: Notification['priority'] = 'medium';
+        
+        switch (order.status) {
+          case 'accepted':
+            title = 'Order Accepted! ✅';
+            message = `Your order #${order.id} has been accepted by ${wholesaler?.name}`;
+            priority = 'high';
+            break;
+          case 'ready':
+            title = 'Order Ready for Pickup! 📦';
+            message = `Your order #${order.id} is ready for collection`;
+            priority = 'high';
+            break;
+          case 'completed':
+            title = 'Order Completed! 🎉';
+            message = `Your order #${order.id} has been completed successfully`;
+            priority = 'medium';
+            break;
+          case 'cancelled':
+            title = 'Order Cancelled ❌';
+            message = `Order #${order.id} has been cancelled`;
+            priority = 'high';
+            break;
+        }
+        
+        if (title && retailer) {
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: createNotification(
+              order.retailerId,
+              'order',
+              title,
+              message,
+              priority,
+              { orderId: order.id, status: order.status }
+            )
+          });
+        }
+      }
+    };
+
+    // Generate notifications for new products
+    const generateProductNotifications = (product: Product) => {
+      const wholesaler = state.users.find(u => u.id === product.wholesalerId);
+      
+      // Notify retailers about new products in categories they might be interested in
+      const retailers = state.users.filter(u => u.role === 'retailer');
+      retailers.forEach(retailer => {
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: createNotification(
+            retailer.id,
+            'product',
+            'New Product Available! 🆕',
+            `${wholesaler?.name} added "${product.name}" in ${product.category} category`,
+            'low',
+            { productId: product.id, productName: product.name, category: product.category, wholesalerName: wholesaler?.name }
+          )
+        });
+      });
+      
+      // Notify admins
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: createNotification(
+          'admin',
+          'product',
+          'New Product Added',
+          `${wholesaler?.name} added "${product.name}" to the platform`,
+          'low',
+          { productId: product.id, productName: product.name, wholesalerName: wholesaler?.name }
+        )
+      });
+    };
+
+    // Generate low stock notifications
+    const generateLowStockNotifications = () => {
+      state.products.forEach(product => {
+        if (product.stock <= 10 && product.stock > 0) {
+          const wholesaler = state.users.find(u => u.id === product.wholesalerId);
+          if (wholesaler) {
+            dispatch({
+              type: 'ADD_NOTIFICATION',
+              payload: createNotification(
+                product.wholesalerId,
+                'product',
+                'Low Stock Alert! ⚠️',
+                `"${product.name}" has only ${product.stock} units remaining`,
+                'medium',
+                { productId: product.id, productName: product.name, stock: product.stock }
+              )
+            });
+          }
+        }
+      });
+    };
+
+    // Generate promotion notifications
+    const generatePromotionNotifications = (promotion: Promotion) => {
+      const wholesaler = state.users.find(u => u.id === promotion.wholesalerId);
+      
+      if (promotion.status === 'approved' && promotion.active) {
+        // Notify all retailers about new promotions
+        const retailers = state.users.filter(u => u.role === 'retailer');
+        retailers.forEach(retailer => {
+          dispatch({
+            type: 'ADD_NOTIFICATION',
+            payload: createNotification(
+              retailer.id,
+              'promotion',
+              'New Promotion Available! 🎉',
+              `${wholesaler?.name}: ${promotion.title} - ${promotion.discount}% OFF`,
+              'high',
+              { promotionId: promotion.id, title: promotion.title, discount: promotion.discount, wholesalerName: wholesaler?.name }
+            )
+          });
+        });
+      }
+    };
+
+    // Generate system notifications
+    const generateSystemNotifications = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // Daily summary for admins (once per day at 9 AM)
+      if (hour === 9 && now.getMinutes() === 0) {
+        const todayOrders = state.orders.filter(order => {
+          const orderDate = new Date(order.createdAt);
+          return orderDate.toDateString() === now.toDateString();
+        });
+        
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: createNotification(
+            'admin',
+            'system',
+            'Daily Platform Summary 📊',
+            `${todayOrders.length} new orders today. Total revenue: R${todayOrders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}`,
+            'low',
+            { ordersCount: todayOrders.length, revenue: todayOrders.reduce((sum, order) => sum + order.total, 0) }
+          )
+        });
+      }
+    };
+
+    // Set up periodic checks
+    const notificationInterval = setInterval(() => {
+      generateLowStockNotifications();
+      generateSystemNotifications();
+    }, 60000); // Check every minute
+
+    return () => {
+      clearInterval(notificationInterval);
+    };
+  }, [state.products, state.orders, state.users, dispatch]);
+};
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
@@ -639,19 +874,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     error 
   } = useSupabaseData();
 
-  // Update state with real data from Supabase
-  const enhancedState = {
+  // Update state with real data from Supabase when it loads
+  useEffect(() => {
+    if (!loading && !error) {
+      dispatch({
+        type: 'SET_INITIAL_DATA',
+        payload: {
+          users,
+          products,
+          orders,
+          tickets,
+          promotions,
+          returnRequests,
+          pendingUsers
+        }
+      });
+    }
+  }, [users, products, orders, tickets, promotions, returnRequests, pendingUsers, loading, error]);
+
+  // Create enhanced state
+  const enhancedState: AppState = {
     ...state,
-    users: error ? state.users : (users.length > 0 ? users : state.users),
-    products: error ? state.products : (products.length > 0 ? products : state.products),
-    orders: error ? state.orders : (orders.length > 0 ? orders : state.orders),
-    tickets: error ? state.tickets : (tickets.length > 0 ? tickets : state.tickets),
-    promotions: error ? state.promotions : (promotions.length > 0 ? promotions : state.promotions),
-    returnRequests: error ? state.returnRequests : (returnRequests.length > 0 ? returnRequests : state.returnRequests),
-    pendingUsers: error ? state.pendingUsers : (pendingUsers.length > 0 ? pendingUsers : state.pendingUsers),
     loading,
     error
   };
+
+  // Enable live notification system
+  useNotificationSystem(enhancedState, dispatch);
 
   // Enhanced dispatch that also updates Supabase
   const enhancedDispatch = async (action: AppAction) => {
