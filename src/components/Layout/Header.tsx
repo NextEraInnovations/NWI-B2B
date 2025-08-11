@@ -21,111 +21,64 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
     const notifications = [];
     const currentUser = state.currentUser;
     
-    if (currentUser?.role === 'wholesaler') {
-      // Wholesaler notifications
-      const pendingOrders = state.orders.filter(o => o.wholesalerId === currentUser.id && o.status === 'pending');
-      const myTickets = state.tickets.filter(t => t.userId === currentUser.id && t.status !== 'closed');
-      
-      pendingOrders.forEach(order => {
-        notifications.push({
-          id: `order-${order.id}`,
-          message: `New order #${order.id} received - R${order.total}`,
-          time: new Date(order.createdAt).toLocaleTimeString(),
-          type: 'order'
-        });
-      });
-      
-      myTickets.forEach(ticket => {
-        if (ticket.status === 'in_progress') {
-          notifications.push({
-            id: `ticket-${ticket.id}`,
-            message: `Support ticket #${ticket.id} is being processed`,
-            time: new Date(ticket.updatedAt).toLocaleTimeString(),
-            type: 'support'
-          });
-        }
-      });
-    } else if (currentUser?.role === 'retailer') {
-      // Retailer notifications
-      const myOrders = state.orders.filter(o => o.retailerId === currentUser.id);
-      const readyOrders = myOrders.filter(o => o.status === 'ready');
-      const acceptedOrders = myOrders.filter(o => o.status === 'accepted');
-      
-      readyOrders.forEach(order => {
-        notifications.push({
-          id: `ready-${order.id}`,
-          message: `Order #${order.id} is ready for pickup!`,
-          time: new Date(order.updatedAt).toLocaleTimeString(),
-          type: 'order'
-        });
-      });
-      
-      acceptedOrders.forEach(order => {
-        notifications.push({
-          id: `accepted-${order.id}`,
-          message: `Order #${order.id} has been accepted`,
-          time: new Date(order.updatedAt).toLocaleTimeString(),
-          type: 'order'
-        });
-      });
-    } else if (currentUser?.role === 'admin') {
-      // Admin notifications
-      const pendingPromotions = state.promotions.filter(p => p.status === 'pending');
-      const openTickets = state.tickets.filter(t => t.status === 'open');
-      
-      pendingPromotions.forEach(promo => {
-        notifications.push({
-          id: `promo-${promo.id}`,
-          message: `New promotion "${promo.title}" awaiting approval`,
-          time: new Date(promo.submittedAt).toLocaleTimeString(),
-          type: 'promotion'
-        });
-      });
-      
-      if (openTickets.length > 0) {
-        notifications.push({
-          id: 'tickets-summary',
-          message: `${openTickets.length} support tickets need attention`,
-          time: 'Now',
-          type: 'support'
-        });
-      }
-    } else if (currentUser?.role === 'support') {
-      // Support notifications
-      const urgentTickets = state.tickets.filter(t => t.priority === 'urgent' && t.status === 'open');
-      const highTickets = state.tickets.filter(t => t.priority === 'high' && t.status === 'open');
-      
-      urgentTickets.forEach(ticket => {
-        notifications.push({
-          id: `urgent-${ticket.id}`,
-          message: `URGENT: ${ticket.subject} - ${ticket.userName}`,
-          time: new Date(ticket.createdAt).toLocaleTimeString(),
-          type: 'urgent'
-        });
-      });
-      
-      if (highTickets.length > 0) {
-        notifications.push({
-          id: 'high-priority',
-          message: `${highTickets.length} high priority tickets pending`,
-          time: 'Now',
-          type: 'support'
-        });
-      }
-    }
+    if (!currentUser) return [];
     
-    return notifications.slice(0, 5); // Show max 5 notifications
+    // Get notifications for current user
+    const userNotifications = state.notifications.filter(notification => {
+      // Show notifications for current user, or role-based notifications
+      return notification.userId === currentUser.id || 
+             (notification.userId === 'admin' && currentUser.role === 'admin') ||
+             (notification.userId === 'support' && currentUser.role === 'support') ||
+             notification.userId === 'system';
+    });
+    
+    // Sort by priority and creation date
+    const sortedNotifications = userNotifications.sort((a, b) => {
+      const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+      const aPriority = priorityOrder[a.priority] || 1;
+      const bPriority = priorityOrder[b.priority] || 1;
+      
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority; // Higher priority first
+      }
+      
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(); // Newer first
+    });
+    
+    // Convert to display format
+    return sortedNotifications.map(notification => ({
+      id: notification.id,
+      message: notification.message,
+      time: new Date(notification.createdAt).toLocaleTimeString(),
+      type: notification.type,
+      priority: notification.priority,
+      read: notification.read,
+      title: notification.title,
+      data: notification.data
+    }));
+  };
+
+  const handleNotificationClick = (notificationId: string) => {
+    // Mark notification as read
+    dispatch({ type: 'MARK_NOTIFICATION_READ', payload: notificationId });
+    
+    // Optional: Navigate to relevant section based on notification type
+    const notification = state.notifications.find(n => n.id === notificationId);
+    if (notification?.data) {
+      // You could add navigation logic here based on notification type
+      console.log('Notification clicked:', notification);
+    }
   };
 
   const handleMarkAllAsRead = useCallback(() => {
-    const notifications = getNotifications();
-    const notificationIds = new Set(notifications.map(n => n.id));
-    setReadNotifications(notificationIds);
+    if (state.currentUser) {
+      dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ', payload: state.currentUser.id });
+    }
     setShowNotifications(false);
-  }, [state]);
+  }, [state.currentUser, dispatch]);
 
   const notifications = getNotifications();
-  const unreadNotifications = notifications.filter(n => !readNotifications.has(n.id));
+  const unreadNotifications = notifications.filter(n => !n.read);
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -203,26 +156,38 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                         <div 
                           key={notification.id} 
                           className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50/50 border-b border-gray-50 last:border-b-0 cursor-pointer transition-all duration-200"
+                          onClick={() => handleNotificationClick(notification.id)}
                         >
                           <div className="flex items-start gap-2 sm:gap-3">
                             <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 shadow-sm ${
-                              notification.type === 'urgent' ? 'bg-red-500' :
+                              notification.priority === 'urgent' ? 'bg-red-500 animate-pulse' :
+                              notification.priority === 'high' ? 'bg-orange-500' :
                               notification.type === 'order' ? 'bg-blue-500' :
                               notification.type === 'promotion' ? 'bg-purple-500' :
                               notification.type === 'support' ? 'bg-orange-500' :
+                              notification.type === 'return' ? 'bg-yellow-500' :
+                              notification.type === 'user' ? 'bg-green-500' :
                               'bg-gray-400'
                             }`}></div>
                             <div className="flex-1 min-w-0">
+                              <p className="text-xs sm:text-sm font-bold text-gray-900 mb-1">
+                                {notification.title}
+                              </p>
                               <p className="text-xs sm:text-sm text-gray-900 font-semibold leading-4 sm:leading-5 break-words">
                                 {notification.message}
                               </p>
                               <p className="text-xs text-gray-400 mt-1 flex-shrink-0">
                                 {notification.time}
                               </p>
+                              {notification.priority === 'urgent' && (
+                                <span className="inline-block mt-1 px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
+                                  URGENT
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-gray-300 font-bold bg-gray-100 rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center flex-shrink-0">
-                              {index + 1}
-                            </div>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
+                            )}
                           </div>
                         </div>
                       ))}

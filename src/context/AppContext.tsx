@@ -26,6 +26,7 @@ interface AppState {
   tickets: SupportTicket[];
   promotions: Promotion[];
   returnRequests: ReturnRequest[];
+  notifications: Notification[];
   analytics: Analytics;
   wholesalerAnalytics: WholesalerAnalytics[];
   platformSettings: PlatformSettings;
@@ -67,7 +68,11 @@ type AppAction =
   | { type: 'ADD_RETURN_REQUEST'; payload: ReturnRequest }
   | { type: 'UPDATE_RETURN_REQUEST'; payload: ReturnRequest }
   | { type: 'APPROVE_RETURN_REQUEST'; payload: { id: string; supportId: string; approvedAmount: number; refundMethod: string } }
-  | { type: 'REJECT_RETURN_REQUEST'; payload: { id: string; supportId: string; reason: string } };
+ | { type: 'REJECT_RETURN_REQUEST'; payload: { id: string; supportId: string; reason: string } }
+ | { type: 'ADD_NOTIFICATION'; payload: Notification }
+ | { type: 'MARK_NOTIFICATION_READ'; payload: string }
+ | { type: 'MARK_ALL_NOTIFICATIONS_READ'; payload: string }
+ | { type: 'DELETE_NOTIFICATION'; payload: string };
 
 const initialState: AppState = {
   currentUser: null,
@@ -133,6 +138,7 @@ const initialState: AppState = {
       createdAt: new Date().toISOString()
     }
   ],
+ notifications: [],
   platformSettings: {
     userRegistrationEnabled: true,
     emailNotificationsEnabled: true,
@@ -192,6 +198,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'ADD_USER':
       return { ...state, users: [...state.users, action.payload] };
     case 'ADD_PENDING_USER':
+      // Create notification for admins about new application
+      const adminNotification = {
+        id: `pending-user-${Date.now()}`,
+        userId: 'admin',
+        type: 'user' as const,
+        title: 'New User Application',
+        message: `${action.payload.name} has applied to join as a ${action.payload.role}`,
+        data: { pendingUserId: action.payload.id, applicantName: action.payload.name, role: action.payload.role },
+        read: false,
+        priority: 'high' as const,
+        createdAt: new Date().toISOString()
+      };
       return { ...state, pendingUsers: [...state.pendingUsers, action.payload] };
     case 'APPROVE_USER':
       const pendingUser = state.pendingUsers.find(u => u.id === action.payload.pendingUserId);
@@ -208,14 +226,50 @@ function appReducer(state: AppState, action: AppAction): AppState {
           status: 'active',
           createdAt: new Date().toISOString()
         };
+        
+        // Create notification for the approved user
+        const approvalNotification = {
+          id: `approval-${Date.now()}`,
+          userId: newUser.id,
+          type: 'user' as const,
+          title: 'Application Approved! 🎉',
+          message: `Welcome to NWI B2B Platform! Your ${pendingUser.role} account has been approved and is now active.`,
+          data: { userId: newUser.id, role: newUser.role },
+          read: false,
+          priority: 'high' as const,
+          createdAt: new Date().toISOString()
+        };
+        
         return {
           ...state,
           users: [...state.users, newUser],
-          pendingUsers: state.pendingUsers.filter(u => u.id !== action.payload.pendingUserId)
+          pendingUsers: state.pendingUsers.filter(u => u.id !== action.payload.pendingUserId),
+          notifications: [...state.notifications, approvalNotification]
         };
       }
       return state;
     case 'REJECT_USER':
+      const rejectedUser = state.pendingUsers.find(u => u.id === action.payload.pendingUserId);
+      if (rejectedUser) {
+        // Create notification for the rejected user (in real app, this would be sent via email)
+        const rejectionNotification = {
+          id: `rejection-${Date.now()}`,
+          userId: 'system',
+          type: 'user' as const,
+          title: 'Application Update',
+          message: `Application from ${rejectedUser.name} has been reviewed and declined. Reason: ${action.payload.reason}`,
+          data: { applicantName: rejectedUser.name, reason: action.payload.reason },
+          read: false,
+          priority: 'medium' as const,
+          createdAt: new Date().toISOString()
+        };
+        
+        return {
+          ...state,
+          pendingUsers: state.pendingUsers.filter(u => u.id !== action.payload.pendingUserId),
+          notifications: [...state.notifications, rejectionNotification]
+        };
+      }
       return {
         ...state,
         pendingUsers: state.pendingUsers.filter(u => u.id !== action.payload.pendingUserId)
@@ -223,7 +277,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_PLATFORM_SETTINGS':
       return { 
         ...state, 
-        platformSettings: { ...state.platformSettings, ...action.payload }
+        pendingUsers: [...state.pendingUsers, action.payload],
+        notifications: [...state.notifications, adminNotification]
       };
     case 'BULK_VERIFY_USERS':
       return {
@@ -284,13 +339,61 @@ function appReducer(state: AppState, action: AppAction): AppState {
         orders: state.orders.map(o => o.id === action.payload.id ? action.payload : o)
       };
     case 'ADD_TICKET':
+      const ticket = action.payload;
+      
+      // Create notification for support team about new ticket
+      const ticketNotification = {
+        id: `ticket-${Date.now()}`,
+        userId: 'support',
+        type: 'support' as const,
+        title: `New ${ticket.priority} Priority Ticket`,
+        message: `${ticket.userName}: ${ticket.subject}`,
+        data: { ticketId: ticket.id, userName: ticket.userName, priority: ticket.priority },
+        read: false,
+        priority: ticket.priority === 'urgent' ? 'urgent' as const : 'high' as const,
+        createdAt: new Date().toISOString()
+      };
+        tickets: [...state.tickets, action.payload],
+        notifications: [...state.notifications, ticketNotification]
       return { ...state, tickets: [...state.tickets, action.payload] };
     case 'UPDATE_TICKET':
+      const updatedTicket = action.payload;
+      
+      // Create notification for ticket owner about status change
+      const ticketUpdateNotification = {
+        id: `ticket-update-${Date.now()}`,
+        userId: updatedTicket.userId,
+        type: 'support' as const,
+        title: `Support Ticket Update`,
+        message: `Your ticket "${updatedTicket.subject}" is now ${updatedTicket.status}`,
+        data: { ticketId: updatedTicket.id, status: updatedTicket.status },
+        read: false,
+        priority: 'medium' as const,
+        createdAt: new Date().toISOString()
+      };
+      
       return {
         ...state,
-        tickets: state.tickets.map(t => t.id === action.payload.id ? action.payload : t)
+        tickets: state.tickets.map(t => t.id === action.payload.id ? action.payload : t),
+        notifications: [...state.notifications, ticketUpdateNotification]
       };
     case 'ADD_PROMOTION':
+      const promotion = action.payload;
+      
+      // Create notification for admins about new promotion request
+      const promotionNotification = {
+        id: `promotion-${Date.now()}`,
+        userId: 'admin',
+        type: 'promotion' as const,
+        title: 'New Promotion Request',
+        message: `"${promotion.title}" - ${promotion.discount}% discount awaiting approval`,
+        data: { promotionId: promotion.id, title: promotion.title, discount: promotion.discount },
+        read: false,
+        priority: 'medium' as const,
+        createdAt: new Date().toISOString()
+      };
+        promotions: [...state.promotions, action.payload],
+        notifications: [...state.notifications, promotionNotification]
       return { ...state, promotions: [...state.promotions, action.payload] };
     case 'UPDATE_PROMOTION':
       return {
@@ -298,6 +401,31 @@ function appReducer(state: AppState, action: AppAction): AppState {
         promotions: state.promotions.map(p => p.id === action.payload.id ? action.payload : p)
       };
     case 'APPROVE_PROMOTION':
+      const approvedPromotion = state.promotions.find(p => p.id === action.payload.id);
+      if (approvedPromotion) {
+        // Create notification for wholesaler about promotion approval
+        const promotionApprovalNotification = {
+          id: `promotion-approved-${Date.now()}`,
+          userId: approvedPromotion.wholesalerId,
+          type: 'promotion' as const,
+          title: 'Promotion Approved! 🎉',
+          message: `Your promotion "${approvedPromotion.title}" has been approved and is now active`,
+          data: { promotionId: approvedPromotion.id, title: approvedPromotion.title },
+          read: false,
+          priority: 'high' as const,
+          createdAt: new Date().toISOString()
+        };
+        
+        return {
+          ...state,
+          promotions: state.promotions.map(p => 
+            p.id === action.payload.id 
+              ? { ...p, status: 'approved', active: true, reviewedAt: new Date().toISOString(), reviewedBy: action.payload.adminId }
+              : p
+          ),
+          notifications: [...state.notifications, promotionApprovalNotification]
+        };
+      }
       return {
         ...state,
         promotions: state.promotions.map(p => 
@@ -307,6 +435,31 @@ function appReducer(state: AppState, action: AppAction): AppState {
         )
       };
     case 'REJECT_PROMOTION':
+      const rejectedPromotion = state.promotions.find(p => p.id === action.payload.id);
+      if (rejectedPromotion) {
+        // Create notification for wholesaler about promotion rejection
+        const promotionRejectionNotification = {
+          id: `promotion-rejected-${Date.now()}`,
+          userId: rejectedPromotion.wholesalerId,
+          type: 'promotion' as const,
+          title: 'Promotion Update',
+          message: `Your promotion "${rejectedPromotion.title}" was not approved. Reason: ${action.payload.reason}`,
+          data: { promotionId: rejectedPromotion.id, title: rejectedPromotion.title, reason: action.payload.reason },
+          read: false,
+          priority: 'medium' as const,
+          createdAt: new Date().toISOString()
+        };
+        
+        return {
+          ...state,
+          promotions: state.promotions.map(p => 
+            p.id === action.payload.id 
+              ? { ...p, status: 'rejected', active: false, reviewedAt: new Date().toISOString(), reviewedBy: action.payload.adminId, rejectionReason: action.payload.reason }
+              : p
+          ),
+          notifications: [...state.notifications, promotionRejectionNotification]
+        };
+      }
       return {
         ...state,
         promotions: state.promotions.map(p => 
@@ -316,6 +469,22 @@ function appReducer(state: AppState, action: AppAction): AppState {
         )
       };
     case 'ADD_RETURN_REQUEST':
+      const returnRequest = action.payload;
+      
+      // Create notification for support team about new return request
+      const returnNotification = {
+        id: `return-${Date.now()}`,
+        userId: 'support',
+        type: 'return' as const,
+        title: 'New Return Request',
+        message: `Return request for Order #${returnRequest.orderId} - R${returnRequest.requestedAmount.toLocaleString()}`,
+        data: { returnId: returnRequest.id, orderId: returnRequest.orderId, amount: returnRequest.requestedAmount },
+        read: false,
+        priority: returnRequest.priority === 'urgent' ? 'urgent' as const : 'high' as const,
+        createdAt: new Date().toISOString()
+      };
+        returnRequests: [...state.returnRequests, action.payload],
+        notifications: [...state.notifications, returnNotification]
       return { ...state, returnRequests: [...state.returnRequests, action.payload] };
     case 'UPDATE_RETURN_REQUEST':
       return {
@@ -323,6 +492,39 @@ function appReducer(state: AppState, action: AppAction): AppState {
         returnRequests: state.returnRequests.map(r => r.id === action.payload.id ? action.payload : r)
       };
     case 'APPROVE_RETURN_REQUEST':
+      const approvedReturn = state.returnRequests.find(r => r.id === action.payload.id);
+      if (approvedReturn) {
+        // Create notification for retailer about return approval
+        const returnApprovalNotification = {
+          id: `return-approved-${Date.now()}`,
+          userId: approvedReturn.retailerId,
+          type: 'return' as const,
+          title: 'Return Request Approved! ✅',
+          message: `Your return request for Order #${approvedReturn.orderId} has been approved for R${action.payload.approvedAmount.toLocaleString()}`,
+          data: { returnId: approvedReturn.id, orderId: approvedReturn.orderId, approvedAmount: action.payload.approvedAmount },
+          read: false,
+          priority: 'high' as const,
+          createdAt: new Date().toISOString()
+        };
+        
+        return {
+          ...state,
+          returnRequests: state.returnRequests.map(r => 
+            r.id === action.payload.id 
+              ? { 
+                  ...r, 
+                  status: 'approved', 
+                  approvedAmount: action.payload.approvedAmount,
+                  refundMethod: action.payload.refundMethod as any,
+                  processedBy: action.payload.supportId,
+                  processedAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                }
+              : r
+          ),
+          notifications: [...state.notifications, returnApprovalNotification]
+        };
+      }
       return {
         ...state,
         returnRequests: state.returnRequests.map(r => 
@@ -340,6 +542,38 @@ function appReducer(state: AppState, action: AppAction): AppState {
         )
       };
     case 'REJECT_RETURN_REQUEST':
+      const rejectedReturn = state.returnRequests.find(r => r.id === action.payload.id);
+      if (rejectedReturn) {
+        // Create notification for retailer about return rejection
+        const returnRejectionNotification = {
+          id: `return-rejected-${Date.now()}`,
+          userId: rejectedReturn.retailerId,
+          type: 'return' as const,
+          title: 'Return Request Update',
+          message: `Your return request for Order #${rejectedReturn.orderId} was not approved. Reason: ${action.payload.reason}`,
+          data: { returnId: rejectedReturn.id, orderId: rejectedReturn.orderId, reason: action.payload.reason },
+          read: false,
+          priority: 'medium' as const,
+          createdAt: new Date().toISOString()
+        };
+        
+        return {
+          ...state,
+          returnRequests: state.returnRequests.map(r => 
+            r.id === action.payload.id 
+              ? { 
+                  ...r, 
+                  status: 'rejected', 
+                  rejectionReason: action.payload.reason,
+                  processedBy: action.payload.supportId,
+                  processedAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                }
+              : r
+          ),
+          notifications: [...state.notifications, returnRejectionNotification]
+        };
+      }
       return {
         ...state,
         returnRequests: state.returnRequests.map(r => 
@@ -354,6 +588,32 @@ function appReducer(state: AppState, action: AppAction): AppState {
               }
             : r
         )
+      };
+    case 'ADD_NOTIFICATION':
+      return {
+        ...state,
+        notifications: [...state.notifications, action.payload]
+      };
+    case 'MARK_NOTIFICATION_READ':
+      return {
+        ...state,
+        notifications: state.notifications.map(n => 
+          n.id === action.payload ? { ...n, read: true } : n
+        )
+      };
+    case 'MARK_ALL_NOTIFICATIONS_READ':
+      return {
+        ...state,
+        notifications: state.notifications.map(n => 
+          n.userId === action.payload || n.userId === 'admin' || n.userId === 'support' 
+            ? { ...n, read: true } 
+            : n
+        )
+      };
+    case 'DELETE_NOTIFICATION':
+      return {
+        ...state,
+        notifications: state.notifications.filter(n => n.id !== action.payload)
       };
     default:
       return state;
