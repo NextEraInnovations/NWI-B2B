@@ -353,9 +353,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
         priority: ticket.priority === 'urgent' ? 'urgent' as const : 'high' as const,
         createdAt: new Date().toISOString()
       };
+      return { 
+        ...state, 
         tickets: [...state.tickets, action.payload],
         notifications: [...state.notifications, ticketNotification]
-      return { ...state, tickets: [...state.tickets, action.payload] };
+      };
     case 'UPDATE_TICKET':
       const updatedTicket = action.payload;
       
@@ -374,7 +376,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       
       return {
         ...state,
-        tickets: state.tickets.map(t => t.id === action.payload.id ? action.payload : t),
+        pendingUsers: [...state.pendingUsers, action.payload],
+        notifications: [...state.notifications, adminNotification]
         notifications: [...state.notifications, ticketUpdateNotification]
       };
     case 'ADD_PROMOTION':
@@ -392,9 +395,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
         priority: 'medium' as const,
         createdAt: new Date().toISOString()
       };
+      return { 
+        ...state, 
         promotions: [...state.promotions, action.payload],
         notifications: [...state.notifications, promotionNotification]
-      return { ...state, promotions: [...state.promotions, action.payload] };
+      };
     case 'UPDATE_PROMOTION':
       return {
         ...state,
@@ -483,9 +488,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
         priority: returnRequest.priority === 'urgent' ? 'urgent' as const : 'high' as const,
         createdAt: new Date().toISOString()
       };
+      return { 
+        ...state, 
         returnRequests: [...state.returnRequests, action.payload],
         notifications: [...state.notifications, returnNotification]
-      return { ...state, returnRequests: [...state.returnRequests, action.payload] };
+      };
     case 'UPDATE_RETURN_REQUEST':
       return {
         ...state,
