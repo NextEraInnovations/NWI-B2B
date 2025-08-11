@@ -532,6 +532,17 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                       <span className="text-gray-500 text-xs sm:text-sm">Total:</span>
                       <span className="font-bold text-green-600 text-sm sm:text-base">R{selectedOrder.total.toLocaleString()}</span>
                     </div>
+                    {selectedOrder.paymentMethod && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-xs sm:text-sm">Payment Method:</span>
+                        <span className="font-medium text-xs sm:text-sm capitalize">
+                          {selectedOrder.paymentMethod === 'payfast' ? 'PayFast' :
+                           selectedOrder.paymentMethod === 'kazang' ? 'Kazang' :
+                           selectedOrder.paymentMethod === 'shop2shop' ? 'Shop2Shop' :
+                           selectedOrder.paymentMethod}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -547,6 +558,17 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                         {selectedOrder.paymentStatus}
                       </span>
                     </div>
+                    {selectedOrder.paymentMethod && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-xs sm:text-sm">Method:</span>
+                        <span className="font-medium text-xs sm:text-sm">
+                          {selectedOrder.paymentMethod === 'payfast' ? 'PayFast' :
+                           selectedOrder.paymentMethod === 'kazang' ? 'Kazang' :
+                           selectedOrder.paymentMethod === 'shop2shop' ? 'Shop2Shop' :
+                           selectedOrder.paymentMethod}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -644,6 +666,14 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                 }`}>
                   {order.paymentStatus}
                 </span>
+                {order.paymentMethod && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    via {order.paymentMethod === 'payfast' ? 'PayFast' :
+                         order.paymentMethod === 'kazang' ? 'Kazang' :
+                         order.paymentMethod === 'shop2shop' ? 'Shop2Shop' :
+                         order.paymentMethod}
+                  </div>
+                )}
               </div>
             </div>
           ))}

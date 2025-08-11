@@ -119,6 +119,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
           total: orderItems.reduce((sum, item) => sum + item.total, 0),
           status: 'pending',
           paymentStatus: 'paid', // Mark as paid since payment was processed
+          paymentMethod: selectedPayment,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };

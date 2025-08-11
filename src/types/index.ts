@@ -34,6 +34,7 @@ export interface Order {
   total: number;
   status: 'pending' | 'accepted' | 'ready' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentMethod?: 'payfast' | 'kazang' | 'shop2shop';
   createdAt: string;
   updatedAt: string;
   pickupTime?: string;
