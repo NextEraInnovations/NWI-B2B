@@ -56,10 +56,12 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
     discount: '',
     validFrom: '',
     validTo: '',
-    productIds: [] as string[]
+    productIds: [] as string[],
+    selectedProducts: [] as Product[]
   });
   const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: 'medium' as const });
   const [dragActive, setDragActive] = useState(false);
+  const [showProductSelector, setShowProductSelector] = useState(false);
 
   const currentUser = state.currentUser!;
   const myProducts = state.products.filter(p => p.wholesalerId === currentUser.id);
@@ -203,8 +205,50 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
     }
   };
 
+  const handleProductToggle = (product: Product) => {
+    const isSelected = newPromotion.selectedProducts.some(p => p.id === product.id);
+    
+    if (isSelected) {
+      setNewPromotion({
+        ...newPromotion,
+        selectedProducts: newPromotion.selectedProducts.filter(p => p.id !== product.id),
+        productIds: newPromotion.productIds.filter(id => id !== product.id)
+      });
+    } else {
+      setNewPromotion({
+        ...newPromotion,
+        selectedProducts: [...newPromotion.selectedProducts, product],
+        productIds: [...newPromotion.productIds, product.id]
+      });
+    }
+  };
+
+  const handleSelectAllProducts = () => {
+    if (newPromotion.selectedProducts.length === myProducts.length) {
+      // Deselect all
+      setNewPromotion({
+        ...newPromotion,
+        selectedProducts: [],
+        productIds: []
+      });
+    } else {
+      // Select all
+      setNewPromotion({
+        ...newPromotion,
+        selectedProducts: myProducts,
+        productIds: myProducts.map(p => p.id)
+      });
+    }
+  };
+
   const handleCreatePromotion = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (newPromotion.selectedProducts.length === 0) {
+      alert('Please select at least one product for the promotion');
+      return;
+    }
+    
     const promotion: Promotion = {
       id: Date.now().toString(),
       wholesalerId: currentUser.id,
@@ -221,9 +265,11 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
       discount: '',
       validFrom: '',
       validTo: '',
-      productIds: []
+      productIds: [],
+      selectedProducts: []
     });
     setShowNewPromotion(false);
+    setShowProductSelector(false);
   };
 
   const handleCreateTicket = (e: React.FormEvent) => {
@@ -1061,31 +1107,84 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Select Products</label>
-                <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2">
-                  {myProducts.map((product) => (
-                    <label key={product.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        checked={newPromotion.productIds.includes(product.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setNewPromotion({
-                              ...newPromotion,
-                              productIds: [...newPromotion.productIds, product.id]
-                            });
-                          } else {
-                            setNewPromotion({
-                              ...newPromotion,
-                              productIds: newPromotion.productIds.filter(id => id !== product.id)
-                            });
-                          }
-                        }}
-                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                      />
-                      <span className="text-sm">{product.name}</span>
-                    </label>
-                  ))}
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  Products for Promotion
+                </label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <span className="text-sm font-medium text-gray-700">
+                      {newPromotion.selectedProducts.length} of {myProducts.length} products selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowProductSelector(!showProductSelector)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      {showProductSelector ? 'Hide Products' : 'Select Products'}
+                    </button>
+                  </div>
+                  
+                  {showProductSelector && (
+                    <div className="border border-gray-200 rounded-lg p-4 max-h-64 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-700">Available Products</span>
+                        <button
+                          type="button"
+                          onClick={handleSelectAllProducts}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          {newPromotion.selectedProducts.length === myProducts.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {myProducts.map((product) => (
+                          <div key={product.id} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded">
+                            <input
+                              type="checkbox"
+                              id={`product-${product.id}`}
+                              checked={newPromotion.selectedProducts.some(p => p.id === product.id)}
+                              onChange={() => handleProductToggle(product)}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                                  <p className="text-xs text-gray-500">{product.category} • R{product.price}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-xs text-gray-500">Stock: {product.stock}</p>
+                                </div>
+                              </div>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {newPromotion.selectedProducts.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium text-gray-700">Selected Products:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {newPromotion.selectedProducts.map((product) => (
+                          <span
+                            key={product.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
+                          >
+                            {product.name}
+                            <button
+                              type="button"
+                              onClick={() => handleProductToggle(product)}
+                              className="ml-1 text-blue-600 hover:text-blue-800"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
