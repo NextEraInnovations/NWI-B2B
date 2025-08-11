@@ -2,8 +2,7 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { useEffect } from 'react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { SupabaseService } from '../services/supabaseService';
-import { User, Product, Order, SupportTicket, Promotion, Analytics, ReturnRequest, PendingUser, WholesalerAnalytics } from '../types';
-import { sampleProducts } from '../data/sampleData';
+import { User, Product, Order, SupportTicket, Promotion, Analytics, ReturnRequest, PendingUser, WholesalerAnalytics, Notification } from '../types';
 
 interface PlatformSettings {
   userRegistrationEnabled: boolean;
@@ -167,7 +166,7 @@ const initialState: AppState = {
     bounceRate: 12.3
   },
   pendingUsers: [],
-  products: sampleProducts,
+  products: [],
   orders: [],
   tickets: [],
   promotions: [],
@@ -223,12 +222,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
         read: false,
         priority: 'high' as const,
         createdAt: new Date().toISOString()
-      };
-      return {
-        ...state,
+        };
+        
+        return {
+          ...state,
         pendingUsers: [...state.pendingUsers, action.payload],
         notifications: [...state.notifications, adminNotification]
-      };
+        };
     case 'APPROVE_USER':
       const pendingUser = state.pendingUsers.find(u => u.id === action.payload.pendingUserId);
       if (pendingUser) {
