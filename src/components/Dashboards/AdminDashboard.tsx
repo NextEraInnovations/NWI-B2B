@@ -31,7 +31,18 @@ import {
   Wifi,
   Server,
   Zap,
-  Globe,
+  Star,
+  TrendingDown,
+  AlertTriangle,
+  CreditCard,
+  Truck,
+  Tag,
+  Users as UsersIcon,
+  ShoppingBag,
+  Percent,
+  Calendar as CalendarIcon,
+  BarChart,
+  LineChart
   Lock,
   Bell,
   RefreshCw,
@@ -52,6 +63,10 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const [selectedPendingUser, setSelectedPendingUser] = useState<PendingUser | null>(null);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [userFilter, setUserFilter] = useState('all');
+  const [selectedWholesaler, setSelectedWholesaler] = useState<string | null>(null);
+  const [analyticsDateRange, setAnalyticsDateRange] = useState('monthly');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [pendingFilter, setPendingFilter] = useState('all');
   const [promotionFilter, setPromotionFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,20 +147,460 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       dispatch({ type: 'SUSPEND_USER', payload: userId });
     }
   };
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Wholesaler Analytics</h2>
+          
+          {/* Date Range Selector */}
+          <div className="flex items-center gap-3">
+            <select
+              value={analyticsDateRange}
+              onChange={(e) => setAnalyticsDateRange(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            >
+              <option value="daily">Last 24 Hours</option>
+              <option value="weekly">Last 7 Days</option>
+              <option value="monthly">Last 30 Days</option>
+              <option value="custom">Custom Range</option>
+            </select>
+            
+            {analyticsDateRange === 'custom' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+              </div>
+            )}
+          </div>
+        </div>
 
-  const handleBroadcastAnnouncement = () => {
-    const message = prompt('Enter announcement message:');
-    const type = prompt('Enter announcement type (info/warning/success):') || 'info';
-    if (message) {
-      dispatch({ type: 'BROADCAST_ANNOUNCEMENT', payload: { message, type } });
+        {/* Wholesaler Selection */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Select Wholesaler</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {wholesalers.map((wholesaler) => {
+              const analytics = wholesalerAnalytics.find(a => a.wholesalerId === wholesaler.id);
+              return (
+                <button
+                  key={wholesaler.id}
+                  onClick={() => setSelectedWholesaler(selectedWholesaler === wholesaler.id ? null : wholesaler.id)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    selectedWholesaler === wholesaler.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="bg-gradient-to-r from-green-100 to-emerald-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                      <Building className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{wholesaler.name}</h4>
+                      <p className="text-sm text-gray-500">{wholesaler.businessName}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Revenue:</span>
+                      <span className="ml-1 font-semibold text-green-600">R{analytics?.totalRevenue.toLocaleString() || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Orders:</span>
+                      <span className="ml-1 font-semibold">{analytics?.totalOrders || 0}</span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Detailed Analytics for Selected Wholesaler */}
+        {selectedWholesaler && (
+          <div className="space-y-6">
+            {(() => {
+              const analytics = wholesalerAnalytics.find(a => a.wholesalerId === selectedWholesaler);
+              const wholesaler = wholesalers.find(w => w.id === selectedWholesaler);
+              
+              if (!analytics || !wholesaler) return null;
+              
+              return (
+                <>
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-2xl font-bold text-gray-900">{analytics.wholesalerName}</h3>
+                        <p className="text-gray-600">{analytics.businessName}</p>
+                        <p className="text-sm text-gray-500">Member since {new Date(analytics.joinDate).toLocaleDateString()}</p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedWholesaler(null)}
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sales & Revenue Section */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <DollarSign className="w-6 h-6 text-green-600" />
+                      Sales & Revenue
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600">Total Revenue</p>
+                            <p className="text-2xl font-bold text-green-700">R{analytics.totalRevenue.toLocaleString()}</p>
+                          </div>
+                          <TrendingUp className="w-8 h-8 text-green-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-600">Total Orders</p>
+                            <p className="text-2xl font-bold text-blue-700">{analytics.totalOrders}</p>
+                          </div>
+                          <ShoppingCart className="w-8 h-8 text-blue-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-purple-600">Avg Order Value</p>
+                            <p className="text-2xl font-bold text-purple-700">R{analytics.averageOrderValue.toFixed(0)}</p>
+                          </div>
+                          <Target className="w-8 h-8 text-purple-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl border border-orange-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-orange-600">Fulfillment Rate</p>
+                            <p className="text-2xl font-bold text-orange-700">{analytics.fulfillmentRate.toFixed(1)}%</p>
+                          </div>
+                          <CheckCircle className="w-8 h-8 text-orange-600" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top Selling Products */}
+                    <div className="mb-6">
+                      <h5 className="text-lg font-semibold text-gray-900 mb-4">Top-Selling Products</h5>
+                      <div className="space-y-3">
+                        {analytics.topProducts.map((product, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-blue-100 w-8 h-8 rounded-lg flex items-center justify-center">
+                                <span className="text-blue-600 font-bold text-sm">#{index + 1}</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{product.name}</p>
+                                <p className="text-sm text-gray-500">{product.units} units sold</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-green-600">R{product.revenue.toLocaleString()}</p>
+                              <p className="text-sm text-gray-500">Revenue</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
       alert('Announcement broadcasted to all users!');
+                  {/* Customers & Market Reach */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <UsersIcon className="w-6 h-6 text-blue-600" />
+                      Customers & Market Reach
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-600">Total Customers</p>
+                            <p className="text-2xl font-bold text-blue-700">{analytics.totalCustomers}</p>
+                          </div>
+                          <Users className="w-8 h-8 text-blue-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600">Repeat Customer Rate</p>
+                            <p className="text-2xl font-bold text-green-700">{analytics.repeatCustomerRate.toFixed(1)}%</p>
+                          </div>
+                          <RefreshCw className="w-8 h-8 text-green-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-purple-600">Period Customers</p>
+                            <p className="text-2xl font-bold text-purple-700">{analytics.customerCount}</p>
+                          </div>
+                          <Activity className="w-8 h-8 text-purple-600" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
     }
+                  {/* Inventory & Stock */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <Package className="w-6 h-6 text-orange-600" />
+                      Inventory & Stock Management
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl border border-orange-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-orange-600">Stock Turnover</p>
+                            <p className="text-2xl font-bold text-orange-700">{analytics.stockTurnover.toFixed(1)}%</p>
+                          </div>
+                          <BarChart className="w-8 h-8 text-orange-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-red-600">Low Stock Items</p>
+                            <p className="text-2xl font-bold text-red-700">{state.products.filter(p => p.wholesalerId === selectedWholesaler && p.stock < p.minOrderQuantity * 2).length}</p>
+                          </div>
+                          <AlertTriangle className="w-8 h-8 text-red-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-xl border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                            <p className="text-2xl font-bold text-gray-700">{state.products.filter(p => p.wholesalerId === selectedWholesaler && p.stock === 0).length}</p>
+                          </div>
+                          <AlertCircle className="w-8 h-8 text-gray-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-600">Total Products</p>
+                            <p className="text-2xl font-bold text-blue-700">{analytics.totalProducts}</p>
+                          </div>
+                          <ShoppingBag className="w-8 h-8 text-blue-600" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
   };
+                  {/* Order Insights */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <Truck className="w-6 h-6 text-indigo-600" />
+                      Order Insights
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600">Fulfillment Rate</p>
+                            <p className="text-2xl font-bold text-green-700">{analytics.fulfillmentRate.toFixed(1)}%</p>
+                          </div>
+                          <CheckCircle className="w-8 h-8 text-green-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-red-600">Return Rate</p>
+                            <p className="text-2xl font-bold text-red-700">{analytics.returnRate.toFixed(1)}%</p>
+                          </div>
+                          <RefreshCw className="w-8 h-8 text-red-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-yellow-600">Cancelled Orders</p>
+                            <p className="text-2xl font-bold text-yellow-700">{analytics.ordersByStatus.find(s => s.status === 'cancelled')?.count || 0}</p>
+                          </div>
+                          <X className="w-8 h-8 text-yellow-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-blue-600">Pending Orders</p>
+                            <p className="text-2xl font-bold text-blue-700">{analytics.ordersByStatus.find(s => s.status === 'pending')?.count || 0}</p>
+                          </div>
+                          <Clock className="w-8 h-8 text-blue-600" />
+                        </div>
+                      </div>
+                    </div>
 
+                    {/* Order Status Breakdown */}
+                    <div>
+                      <h5 className="text-lg font-semibold text-gray-900 mb-4">Order Status Breakdown</h5>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        {analytics.ordersByStatus.map((status) => (
+                          <div key={status.status} className="bg-gray-50 p-3 rounded-lg text-center">
+                            <p className="text-sm text-gray-600 capitalize">{status.status}</p>
+                            <p className="text-xl font-bold text-gray-900">{status.count}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
   const toggleUserSelection = (userId: string) => {
+                  {/* Marketing & Promotions */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <Tag className="w-6 h-6 text-purple-600" />
+                      Marketing & Promotions
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-purple-600">Active Promotions</p>
+                            <p className="text-2xl font-bold text-purple-700">{analytics.activePromotions}</p>
+                          </div>
+                          <Percent className="w-8 h-8 text-purple-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600">Promotion Revenue</p>
+                            <p className="text-2xl font-bold text-green-700">R{analytics.promotionPerformance.reduce((sum, p) => sum + p.revenue, 0).toLocaleString()}</p>
+                          </div>
+                          <TrendingUp className="w-8 h-8 text-green-600" />
+                        </div>
+                      </div>
+                    </div>
     setBulkSelectedUsers(prev => 
+                    {/* Promotion Performance */}
+                    {analytics.promotionPerformance.length > 0 && (
+                      <div>
+                        <h5 className="text-lg font-semibold text-gray-900 mb-4">Promotion Performance</h5>
+                        <div className="space-y-3">
+                          {analytics.promotionPerformance.slice(0, 5).map((promo, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div>
+                                <p className="font-medium text-gray-900">{promo.title}</p>
+                                <p className="text-sm text-gray-500">{promo.ordersGenerated} orders generated</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-green-600">R{promo.revenue.toLocaleString()}</p>
+                                <p className="text-sm text-gray-500">Revenue</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
       prev.includes(userId) 
+                  {/* Financial & Payments */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <CreditCard className="w-6 h-6 text-green-600" />
+                      Financial & Payments
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-green-600">Total Revenue</p>
+                            <p className="text-2xl font-bold text-green-700">R{analytics.totalRevenue.toLocaleString()}</p>
+                          </div>
+                          <DollarSign className="w-8 h-8 text-green-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-yellow-600">Pending Payments</p>
+                            <p className="text-2xl font-bold text-yellow-700">{state.orders.filter(o => o.wholesalerId === selectedWholesaler && o.paymentStatus === 'pending').length}</p>
+                          </div>
+                          <Clock className="w-8 h-8 text-yellow-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-red-600">Failed Payments</p>
+                            <p className="text-2xl font-bold text-red-700">{state.orders.filter(o => o.wholesalerId === selectedWholesaler && o.paymentStatus === 'failed').length}</p>
+                          </div>
+                          <AlertTriangle className="w-8 h-8 text-red-600" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
         ? prev.filter(id => id !== userId)
+                  {/* Revenue Trend Chart */}
+                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <LineChart className="w-6 h-6 text-blue-600" />
+                      Revenue Trends (Last 12 Months)
+                    </h4>
+                    
+                    <div className="space-y-3">
+                      {analytics.monthlyRevenue.map((month, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <span className="font-medium text-gray-900">{month.month}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-32 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full" 
+                                style={{ 
+                                  width: `${Math.min(100, (month.revenue / Math.max(...analytics.monthlyRevenue.map(m => m.revenue))) * 100)}%` 
+                                }}
+                              ></div>
+                            </div>
+                            <span className="font-bold text-blue-600 min-w-[100px] text-right">R{month.revenue.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        )}
         : [...prev, userId]
     );
   };
@@ -631,10 +1086,180 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                   Reject
                 </button>
               </div>
+    const wholesalers = state.users.filter(u => u.role === 'wholesaler');
+    
+    // Generate comprehensive analytics for each wholesaler
+    const generateWholesalerAnalytics = (wholesaler: User): WholesalerAnalytics => {
+      const wholesalerOrders = state.orders.filter(o => o.wholesalerId === wholesaler.id);
+      const wholesalerProducts = state.products.filter(p => p.wholesalerId === wholesaler.id);
+      const wholesalerPromotions = state.promotions.filter(p => p.wholesalerId === wholesaler.id);
+      const wholesalerReturns = state.returnRequests.filter(r => r.wholesalerId === wholesaler.id);
+      
+      // Calculate date range
+      const now = new Date();
+      let startDate = new Date();
+      
+      switch (analyticsDateRange) {
+        case 'daily':
+          startDate.setDate(now.getDate() - 1);
+          break;
+        case 'weekly':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'monthly':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case 'custom':
+          startDate = customDateFrom ? new Date(customDateFrom) : new Date(now.getFullYear(), 0, 1);
+          break;
+        default:
+          startDate.setMonth(now.getMonth() - 1);
+      }
+      
+      const endDate = analyticsDateRange === 'custom' && customDateTo ? new Date(customDateTo) : now;
+      
+      // Filter orders by date range
+      const periodOrders = wholesalerOrders.filter(o => {
+        const orderDate = new Date(o.createdAt);
+        return orderDate >= startDate && orderDate <= endDate;
+      });
+      
+      // Sales & Revenue calculations
+      const totalRevenue = periodOrders.reduce((sum, order) => sum + order.total, 0);
+      const totalOrders = periodOrders.length;
+      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      
+      // Customer analytics
+      const uniqueCustomers = new Set(periodOrders.map(o => o.retailerId)).size;
+      const allCustomers = new Set(wholesalerOrders.map(o => o.retailerId));
+      const totalCustomers = allCustomers.size;
+      
+      // Calculate returning customers
+      const customerOrderCounts = wholesalerOrders.reduce((acc, order) => {
+        acc[order.retailerId] = (acc[order.retailerId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const returningCustomers = Object.values(customerOrderCounts).filter(count => count > 1).length;
+      const newCustomers = totalCustomers - returningCustomers;
+      const repeatCustomerRate = totalCustomers > 0 ? (returningCustomers / totalCustomers) * 100 : 0;
+      
+      // Top products calculation
+      const productSales = periodOrders.reduce((acc, order) => {
+        order.items.forEach(item => {
+          if (!acc[item.productId]) {
+            acc[item.productId] = {
+              name: item.productName,
+              sales: 0,
+              revenue: 0,
+              units: 0
+            };
+          }
+          acc[item.productId].sales += item.quantity;
+          acc[item.productId].revenue += item.total;
+          acc[item.productId].units += item.quantity;
+        });
+        return acc;
+      }, {} as Record<string, { name: string; sales: number; revenue: number; units: number }>);
+      
+      const topProducts = Object.values(productSales)
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5);
+      
+      // Monthly revenue trend
+      const monthlyRevenue = [];
+      for (let i = 11; i >= 0; i--) {
+        const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        const monthOrders = wholesalerOrders.filter(o => {
+          const orderDate = new Date(o.createdAt);
+          return orderDate >= monthStart && orderDate <= monthEnd;
+        });
+        const monthRevenue = monthOrders.reduce((sum, order) => sum + order.total, 0);
+        monthlyRevenue.push({
+          month: monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          revenue: monthRevenue
+        });
+      }
+      
+      // Order status breakdown
+      const ordersByStatus = [
+        { status: 'completed', count: wholesalerOrders.filter(o => o.status === 'completed').length },
+        { status: 'pending', count: wholesalerOrders.filter(o => o.status === 'pending').length },
+        { status: 'accepted', count: wholesalerOrders.filter(o => o.status === 'accepted').length },
+        { status: 'ready', count: wholesalerOrders.filter(o => o.status === 'ready').length },
+        { status: 'cancelled', count: wholesalerOrders.filter(o => o.status === 'cancelled').length }
+      ];
+      
+      // Inventory calculations
+      const lowStockProducts = wholesalerProducts.filter(p => p.stock < p.minOrderQuantity * 2);
+      const outOfStockProducts = wholesalerProducts.filter(p => p.stock === 0);
+      
+      // Calculate stock turnover (simplified)
+      const totalStock = wholesalerProducts.reduce((sum, p) => sum + p.stock, 0);
+      const totalSold = periodOrders.reduce((sum, order) => 
+        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+      );
+      const stockTurnover = totalStock > 0 ? (totalSold / totalStock) * 100 : 0;
+      
+      // Financial calculations
+      const completedOrders = periodOrders.filter(o => o.status === 'completed');
+      const pendingPayments = periodOrders.filter(o => o.paymentStatus === 'pending');
+      const failedPayments = periodOrders.filter(o => o.paymentStatus === 'failed');
+      
+      const fulfillmentRate = totalOrders > 0 ? (completedOrders.length / totalOrders) * 100 : 0;
+      const cancelledOrders = periodOrders.filter(o => o.status === 'cancelled').length;
+      const returnRate = totalOrders > 0 ? (wholesalerReturns.length / totalOrders) * 100 : 0;
+      
+      // Promotion effectiveness
+      const activePromotions = wholesalerPromotions.filter(p => p.active && p.status === 'approved').length;
+      const promotionPerformance = wholesalerPromotions
+        .filter(p => p.status === 'approved')
+        .map(promo => ({
+          title: promo.title,
+          ordersGenerated: periodOrders.filter(o => 
+            o.items.some(item => promo.productIds.includes(item.productId))
+          ).length,
+          revenue: periodOrders
+            .filter(o => o.items.some(item => promo.productIds.includes(item.productId)))
+            .reduce((sum, order) => sum + order.total, 0)
+        }));
+      
+      return {
+        wholesalerId: wholesaler.id,
+        wholesalerName: wholesaler.name,
+        businessName: wholesaler.businessName || 'N/A',
+        totalRevenue,
+        totalOrders,
+        totalProducts: wholesalerProducts.length,
+        activePromotions,
+        averageOrderValue,
+        monthlyRevenue,
+        ordersByStatus,
+        topProducts,
+        customerCount: uniqueCustomers,
+        repeatCustomerRate,
+        stockTurnover,
+        promotionPerformance,
+        recentActivity: [
+          { date: new Date().toLocaleDateString(), activity: 'Total Revenue', value: `R${totalRevenue.toLocaleString()}` },
+          { date: new Date().toLocaleDateString(), activity: 'Orders Processed', value: totalOrders.toString() },
+          { date: new Date().toLocaleDateString(), activity: 'Active Products', value: wholesalerProducts.filter(p => p.available).length.toString() }
+        ],
+        joinDate: wholesaler.createdAt,
+        lastOrderDate: wholesalerOrders.length > 0 ? wholesalerOrders[wholesalerOrders.length - 1].createdAt : 'No orders yet',
+        totalCustomers,
+        averageRating: 4.5, // Placeholder - would be calculated from reviews
+        supportTickets: state.tickets.filter(t => t.userId === wholesaler.id).length,
+        returnRate,
+        fulfillmentRate
+      };
+    };
+    
+    const wholesalerAnalytics = wholesalers.map(generateWholesalerAnalytics);
+    
             </div>
           </div>
-        ))}
-        
         {filteredPendingUsers.length === 0 && (
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
             <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
