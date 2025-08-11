@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { SupabaseService } from '../services/supabaseService';
 import { User, Product, Order, SupportTicket, Promotion, Analytics, ReturnRequest, PendingUser, WholesalerAnalytics } from '../types';
+import { sampleProducts } from '../data/sampleData';
 
 interface PlatformSettings {
   userRegistrationEnabled: boolean;
@@ -166,7 +167,7 @@ const initialState: AppState = {
     bounceRate: 12.3
   },
   pendingUsers: [],
-  products: [],
+  products: sampleProducts,
   orders: [],
   tickets: [],
   promotions: [],
@@ -222,9 +223,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         read: false,
         priority: 'high' as const,
         createdAt: new Date().toISOString()
+      };
+      return {
+        ...state,
         pendingUsers: [...state.pendingUsers, action.payload],
         notifications: [...state.notifications, adminNotification]
-      return { ...state, pendingUsers: [...state.pendingUsers, action.payload] };
+      };
     case 'APPROVE_USER':
       const pendingUser = state.pendingUsers.find(u => u.id === action.payload.pendingUserId);
       if (pendingUser) {
@@ -386,6 +390,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       
       return {
         ...state,
+        tickets: state.tickets.map(t => t.id === action.payload.id ? action.payload : t),
         notifications: [...state.notifications, ticketUpdateNotification]
       };
     case 'ADD_PROMOTION':

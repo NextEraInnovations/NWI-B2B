@@ -129,7 +129,7 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
             <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
               {unreadNotifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center shadow-lg animate-pulse">
-                  {unreadNotifications.length}
+                  {unreadNotifications.length > 99 ? '99+' : unreadNotifications.length}
                 </span>
               )}
             </button>
@@ -149,7 +149,8 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                   {unreadNotifications.length === 0 ? (
                     <div className="p-6 sm:p-8 text-center text-gray-500">
                       <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <p className="text-base sm:text-lg font-medium">No new notifications</p>
+                      <p className="text-base sm:text-lg font-medium">All caught up!</p>
+                      <p className="text-sm text-gray-400 mt-2">No new notifications</p>
                     </div>
                   ) : (
                     <div className="py-2 sm:py-3">
@@ -172,8 +173,6 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                             }`}></div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs sm:text-sm font-bold text-gray-900 mb-1">
-                            notification.type === 'product' ? 'bg-indigo-500' :
-                            notification.type === 'system' ? 'bg-gray-500' :
                                 {notification.title}
                               </p>
                               <p className="text-xs sm:text-sm text-gray-900 font-semibold leading-4 sm:leading-5 break-words">
@@ -191,11 +190,6 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                             {!notification.read && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
                             )}
-                            {notification.priority === 'high' && (
-                              <span className="inline-block mt-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded-full">
-                                HIGH
-                              </span>
-                            )}
                           </div>
                         </div>
                       ))}
@@ -208,7 +202,7 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                         onClick={handleMarkAllAsRead}
                         className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-semibold py-2 sm:py-3 rounded-lg hover:bg-blue-50 transition-all duration-200"
                       >
-                        Mark all as read
+                        Mark all as read ({unreadNotifications.length})
                       </button>
                     </div>
                   )}

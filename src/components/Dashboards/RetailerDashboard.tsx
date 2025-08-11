@@ -87,8 +87,12 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
     if (product) {
       const currentQuantity = cart[productId] || 0;
       const newQuantity = currentQuantity + product.minOrderQuantity;
-      if (newQuantity <= product.stock) {
+      if (newQuantity <= product.stock && product.available) {
         setCart({ ...cart, [productId]: newQuantity });
+      } else if (!product.available) {
+        alert('This product is currently unavailable');
+      } else {
+        alert(`Only ${product.stock} units available in stock`);
       }
     }
   };
@@ -122,32 +126,47 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
   const handleCheckout = () => {
     if (Object.keys(cart).length === 0) return;
 
-    const orderItems: OrderItem[] = Object.entries(cart).map(([productId, quantity]) => {
-      const product = state.products.find(p => p.id === productId)!;
-      return {
-        productId,
-        productName: product.name,
-        quantity,
-        price: getDiscountedPrice(product),
-        total: getDiscountedPrice(product) * quantity
-      };
+    // Group cart items by wholesaler
+    const ordersByWholesaler: { [wholesalerId: string]: { items: OrderItem[], wholesalerId: string } } = {};
+    
+    Object.entries(cart).forEach(([productId, quantity]) => {
+      const product = state.products.find(p => p.id === productId);
+      if (product) {
+        if (!ordersByWholesaler[product.wholesalerId]) {
+          ordersByWholesaler[product.wholesalerId] = {
+            items: [],
+            wholesalerId: product.wholesalerId
+          };
+        }
+        
+        ordersByWholesaler[product.wholesalerId].items.push({
+          productId,
+          productName: product.name,
+          quantity,
+          price: getDiscountedPrice(product),
+          total: getDiscountedPrice(product) * quantity
+        });
+      }
     });
-
-    const order: Order = {
-      id: Date.now().toString(),
-      retailerId: currentUser.id,
-      wholesalerId: orderItems[0] ? state.products.find(p => p.id === orderItems[0].productId)?.wholesalerId || '' : '',
-      items: orderItems,
-      total: getCartTotal(),
-      status: 'pending',
-      paymentStatus: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    dispatch({ type: 'ADD_ORDER', payload: order });
+    // Create separate orders for each wholesaler
+    Object.values(ordersByWholesaler).forEach((orderGroup, index) => {
+      const order: Order = {
+        id: `${Date.now()}-${index}`,
+        retailerId: currentUser.id,
+        wholesalerId: orderGroup.wholesalerId,
+        items: orderGroup.items,
+        total: orderGroup.items.reduce((sum, item) => sum + item.total, 0),
+        status: 'pending',
+        paymentStatus: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      dispatch({ type: 'ADD_ORDER', payload: order });
+    });
+    
     setCart({});
-    alert('Order placed successfully!');
+    alert(`${Object.keys(ordersByWholesaler).length} order(s) placed successfully!`);
   };
 
   const handleCreateTicket = (e: React.FormEvent) => {

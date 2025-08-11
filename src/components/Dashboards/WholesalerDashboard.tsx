@@ -67,6 +67,7 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
   const myProducts = state.products.filter(p => p.wholesalerId === currentUser.id);
   const myOrders = state.orders.filter(o => o.wholesalerId === currentUser.id);
   const myTickets = state.tickets.filter(t => t.userId === currentUser.id);
+  const myProducts = state.products.filter(p => p.wholesalerId === currentUser.id);
   const myPromotions = state.promotions.filter(p => p.wholesalerId === currentUser.id);
 
   const handleImageUpload = (file: File) => {
@@ -198,6 +199,23 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
   const handleUpdateOrderStatus = (orderId: string, status: Order['status']) => {
     const order = myOrders.find(o => o.id === orderId);
     if (order) {
+      // Update product stock when order is completed
+      if (status === 'completed' && order.status !== 'completed') {
+        order.items.forEach(item => {
+          const product = state.products.find(p => p.id === item.productId);
+          if (product && product.stock >= item.quantity) {
+            dispatch({
+              type: 'UPDATE_PRODUCT',
+              payload: {
+                ...product,
+                stock: product.stock - item.quantity,
+                updatedAt: new Date().toISOString()
+              }
+            });
+          }
+        });
+      }
+      
       dispatch({ 
         type: 'UPDATE_ORDER', 
         payload: { ...order, status, updatedAt: new Date().toISOString() }
@@ -244,6 +262,12 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
   const handleCreatePromotion = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (selectedProducts.length === 0) {
+      alert('Please select at least one product for the promotion');
+      return;
+    }
+    
+    
     if (newPromotion.selectedProducts.length === 0) {
       alert('Please select at least one product for the promotion');
       return;
@@ -253,6 +277,7 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
       id: Date.now().toString(),
       wholesalerId: currentUser.id,
       ...newPromotion,
+      productIds: selectedProducts,
       discount: parseFloat(newPromotion.discount),
       active: false,
       status: 'pending',
@@ -260,6 +285,8 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
     };
     dispatch({ type: 'ADD_PROMOTION', payload: promotion });
     setNewPromotion({
+    setSelectedProducts([]);
+    setShowProductSelector(false);
       title: '',
       description: '',
       discount: '',

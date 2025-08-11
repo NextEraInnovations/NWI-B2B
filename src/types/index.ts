@@ -133,6 +133,19 @@ export interface Analytics {
   topProducts: { name: string; sales: number }[];
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'order' | 'promotion' | 'support' | 'user' | 'product' | 'return' | 'system';
+  title: string;
+  message: string;
+  data?: any;
+  read: boolean;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  createdAt: string;
+  expiresAt?: string;
+}
+
 export interface WholesalerAnalytics {
   wholesalerId: string;
   wholesalerName: string;
