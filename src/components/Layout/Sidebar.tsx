@@ -9,7 +9,8 @@ import {
   Truck,
   MessageSquare,
   CreditCard,
-  Tag
+  Tag,
+  Clock
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -47,6 +48,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         return [
           { id: 'overview', label: 'Dashboard', icon: BarChart3 },
           { id: 'users', label: 'Users', icon: Users },
+          { id: 'pending-applications', label: 'Applications', icon: Clock },
           { id: 'orders', label: 'All Orders', icon: ShoppingCart },
           { id: 'products', label: 'All Products', icon: Package },
           { id: 'promotions', label: 'Promotions', icon: Tag },

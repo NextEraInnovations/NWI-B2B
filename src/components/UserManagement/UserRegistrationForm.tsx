@@ -181,7 +181,7 @@ export function UserRegistrationForm({ isOpen, onClose }: UserRegistrationFormPr
           
           <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-xs text-blue-700 text-center">
-              📋 Your application will be reviewed by our admin team. You'll receive access once approved.
+              📋 Your application will be sent to our admin team for review. You'll receive email notification once your application is processed.
             </p>
           </div>
         </form>
