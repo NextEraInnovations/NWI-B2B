@@ -67,7 +67,6 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
   const myProducts = state.products.filter(p => p.wholesalerId === currentUser.id);
   const myOrders = state.orders.filter(o => o.wholesalerId === currentUser.id);
   const myTickets = state.tickets.filter(t => t.userId === currentUser.id);
-  const myProducts = state.products.filter(p => p.wholesalerId === currentUser.id);
   const myPromotions = state.promotions.filter(p => p.wholesalerId === currentUser.id);
 
   const handleImageUpload = (file: File) => {
@@ -262,12 +261,6 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
   const handleCreatePromotion = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (selectedProducts.length === 0) {
-      alert('Please select at least one product for the promotion');
-      return;
-    }
-    
-    
     if (newPromotion.selectedProducts.length === 0) {
       alert('Please select at least one product for the promotion');
       return;
@@ -277,7 +270,6 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
       id: Date.now().toString(),
       wholesalerId: currentUser.id,
       ...newPromotion,
-      productIds: selectedProducts,
       discount: parseFloat(newPromotion.discount),
       active: false,
       status: 'pending',
@@ -285,8 +277,6 @@ export function WholesalerDashboard({ activeTab }: WholesalerDashboardProps) {
     };
     dispatch({ type: 'ADD_PROMOTION', payload: promotion });
     setNewPromotion({
-    setSelectedProducts([]);
-    setShowProductSelector(false);
       title: '',
       description: '',
       discount: '',
