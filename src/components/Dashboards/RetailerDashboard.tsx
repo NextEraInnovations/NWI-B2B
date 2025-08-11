@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Product, Order, OrderItem, SupportTicket } from '../../types';
+import { CheckoutPage } from '../Checkout/CheckoutPage';
 
 interface RetailerDashboardProps {
   activeTab: string;
@@ -38,6 +39,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: 'medium' as const });
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const currentUser = state.currentUser!;
   const myOrders = state.orders.filter(o => o.retailerId === currentUser.id);
@@ -125,49 +127,24 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
 
   const handleCheckout = () => {
     if (Object.keys(cart).length === 0) return;
-
-    // Group cart items by wholesaler
-    const ordersByWholesaler: { [wholesalerId: string]: { items: OrderItem[], wholesalerId: string } } = {};
-    
-    Object.entries(cart).forEach(([productId, quantity]) => {
-      const product = state.products.find(p => p.id === productId);
-      if (product) {
-        if (!ordersByWholesaler[product.wholesalerId]) {
-          ordersByWholesaler[product.wholesalerId] = {
-            items: [],
-            wholesalerId: product.wholesalerId
-          };
-        }
-        
-        ordersByWholesaler[product.wholesalerId].items.push({
-          productId,
-          productName: product.name,
-          quantity,
-          price: getDiscountedPrice(product),
-          total: getDiscountedPrice(product) * quantity
-        });
-      }
-    });
-    // Create separate orders for each wholesaler
-    Object.values(ordersByWholesaler).forEach((orderGroup, index) => {
-      const order: Order = {
-        id: `${Date.now()}-${index}`,
-        retailerId: currentUser.id,
-        wholesalerId: orderGroup.wholesalerId,
-        items: orderGroup.items,
-        total: orderGroup.items.reduce((sum, item) => sum + item.total, 0),
-        status: 'pending',
-        paymentStatus: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      dispatch({ type: 'ADD_ORDER', payload: order });
-    });
-    
-    setCart({});
-    alert(`${Object.keys(ordersByWholesaler).length} order(s) placed successfully!`);
+    setShowCheckout(true);
   };
+
+  const handleCheckoutComplete = () => {
+    setCart({});
+    setShowCheckout(false);
+  };
+
+  // Show checkout page if in checkout mode
+  if (showCheckout) {
+    return (
+      <CheckoutPage 
+        cart={cart}
+        onBack={() => setShowCheckout(false)}
+        onOrderComplete={handleCheckoutComplete}
+      />
+    );
+  }
 
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
