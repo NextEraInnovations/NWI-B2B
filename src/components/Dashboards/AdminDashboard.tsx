@@ -1,57 +1,58 @@
 import React, { useState } from 'react';
 import { 
+  BarChart3, 
   Users, 
   ShoppingCart, 
   Package, 
-  BarChart3, 
-  Settings, 
+  DollarSign, 
   TrendingUp, 
-  DollarSign,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  UserCheck,
-  UserX,
-  Filter,
-  Search,
-  User,
-  Building,
-  Phone,
-  Mail,
-  MapPin,
-  FileText,
-  Calendar,
-  Tag,
-  MessageSquare,
-  Activity,
-  Shield,
-  Database,
-  Wifi,
-  Server,
-  Zap,
-  Star,
-  TrendingDown,
-  AlertTriangle,
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  XCircle, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  Upload, 
+  Settings, 
+  User, 
+  Phone, 
+  Mail, 
+  MapPin, 
+  Building, 
+  Calendar, 
+  Star, 
+  MessageSquare, 
+  FileText, 
+  Shield, 
+  Activity, 
+  Database, 
+  Server, 
+  Wifi, 
+  HardDrive, 
+  Cpu, 
   CreditCard,
   Truck,
   Tag,
   Users as UsersIcon,
   ShoppingBag,
   Percent,
-  Calendar as CalendarIcon,
-  BarChart,
-  LineChart
+  Target,
+  TrendingDown,
   Lock,
+  Globe,
   Bell,
+  Zap,
   RefreshCw,
-  Download,
-  Upload,
-  RotateCcw
+  Save,
+  X
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { User as UserType, PendingUser, Promotion } from '../../types';
+import { User as UserType, Product, Order, SupportTicket, Promotion, PendingUser } from '../../types';
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -60,22 +61,107 @@ interface AdminDashboardProps {
 export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const { state, dispatch } = useApp();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
-  const [selectedPendingUser, setSelectedPendingUser] = useState<PendingUser | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
-  const [userFilter, setUserFilter] = useState('all');
-  const [selectedWholesaler, setSelectedWholesaler] = useState<string | null>(null);
-  const [analyticsDateRange, setAnalyticsDateRange] = useState('monthly');
-  const [customDateFrom, setCustomDateFrom] = useState('');
-  const [customDateTo, setCustomDateTo] = useState('');
-  const [pendingFilter, setPendingFilter] = useState('all');
-  const [promotionFilter, setPromotionFilter] = useState('all');
+  const [selectedPendingUser, setSelectedPendingUser] = useState<PendingUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [bulkSelectedUsers, setBulkSelectedUsers] = useState<string[]>([]);
-  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [userFilter, setUserFilter] = useState('all');
+  const [productFilter, setProductFilter] = useState('all');
+  const [orderFilter, setOrderFilter] = useState('all');
+  const [promotionFilter, setPromotionFilter] = useState('all');
+  const [showNewUser, setShowNewUser] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: 'retailer' as 'wholesaler' | 'retailer' | 'admin' | 'support',
+    businessName: '',
+    phone: '',
+    address: ''
+  });
+
+  // Platform settings state
+  const [platformSettings, setPlatformSettings] = useState(state.platformSettings);
+  const [settingsChanged, setSettingsChanged] = useState(false);
 
   const currentUser = state.currentUser!;
-  const pendingUsers = state.pendingUsers || [];
-  const pendingPromotions = state.promotions.filter(p => p.status === 'pending');
+
+  const handleApproveUser = (pendingUserId: string) => {
+    dispatch({ type: 'APPROVE_USER', payload: { pendingUserId, adminId: currentUser.id } });
+  };
+
+  const handleRejectUser = (pendingUserId: string, reason: string) => {
+    dispatch({ type: 'REJECT_USER', payload: { pendingUserId, adminId: currentUser.id, reason } });
+  };
+
+  const handleApprovePromotion = (promotionId: string) => {
+    dispatch({ type: 'APPROVE_PROMOTION', payload: { id: promotionId, adminId: currentUser.id } });
+  };
+
+  const handleRejectPromotion = (promotionId: string, reason: string) => {
+    dispatch({ type: 'REJECT_PROMOTION', payload: { id: promotionId, adminId: currentUser.id, reason } });
+  };
+
+  const handleCreateUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user: UserType = {
+      id: Date.now().toString(),
+      ...newUser,
+      verified: true,
+      status: 'active',
+      createdAt: new Date().toISOString()
+    };
+    dispatch({ type: 'ADD_USER', payload: user });
+    setNewUser({
+      name: '',
+      email: '',
+      role: 'retailer',
+      businessName: '',
+      phone: '',
+      address: ''
+    });
+    setShowNewUser(false);
+  };
+
+  const handleBulkVerifyUsers = () => {
+    const unverifiedUserIds = state.users.filter(u => !u.verified).map(u => u.id);
+    if (unverifiedUserIds.length > 0) {
+      dispatch({ type: 'BULK_VERIFY_USERS', payload: unverifiedUserIds });
+    }
+  };
+
+  const handleSuspendUser = (userId: string) => {
+    dispatch({ type: 'SUSPEND_USER', payload: userId });
+  };
+
+  const handleBroadcastAnnouncement = () => {
+    const message = prompt('Enter announcement message:');
+    if (message) {
+      dispatch({ type: 'BROADCAST_ANNOUNCEMENT', payload: { message, type: 'info' } });
+      alert('Announcement sent to all users!');
+    }
+  };
+
+  const handleUpdateSettings = (key: string, value: any) => {
+    setPlatformSettings(prev => ({ ...prev, [key]: value }));
+    setSettingsChanged(true);
+  };
+
+  const handleSaveSettings = () => {
+    dispatch({ type: 'UPDATE_PLATFORM_SETTINGS', payload: platformSettings });
+    setSettingsChanged(false);
+    alert('Settings saved successfully!');
+  };
+
+  const handleResetSettings = () => {
+    if (confirm('Are you sure you want to reset all settings to default values?')) {
+      dispatch({ type: 'RESET_SETTINGS_TO_DEFAULT' });
+      setPlatformSettings(state.platformSettings);
+      setSettingsChanged(false);
+    }
+  };
 
   const filteredUsers = state.users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,532 +170,33 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     return matchesSearch && matchesFilter;
   });
 
-  const filteredPendingUsers = pendingUsers.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = pendingFilter === 'all' || user.role === pendingFilter;
+  const filteredProducts = state.products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = productFilter === 'all' || 
+                         (productFilter === 'available' && product.available) ||
+                         (productFilter === 'unavailable' && !product.available);
     return matchesSearch && matchesFilter;
   });
 
-  const filteredPromotions = state.promotions.filter(promotion => {
-    const matchesFilter = promotionFilter === 'all' || promotion.status === promotionFilter;
+  const filteredOrders = state.orders.filter(order => {
+    const matchesFilter = orderFilter === 'all' || order.status === orderFilter;
     return matchesFilter;
   });
 
-  const handleApproveUser = (pendingUserId: string) => {
-    dispatch({ 
-      type: 'APPROVE_USER', 
-      payload: { pendingUserId, adminId: currentUser.id }
-    });
-    setSelectedPendingUser(null);
-  };
-
-  const handleRejectUser = (pendingUserId: string) => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (reason) {
-      dispatch({ 
-        type: 'REJECT_USER', 
-        payload: { pendingUserId, adminId: currentUser.id, reason }
-      });
-      setSelectedPendingUser(null);
-    }
-  };
-
-  const handleApprovePromotion = (promotionId: string) => {
-    dispatch({ 
-      type: 'APPROVE_PROMOTION', 
-      payload: { id: promotionId, adminId: currentUser.id }
-    });
-    setSelectedPromotion(null);
-  };
-
-  const handleRejectPromotion = (promotionId: string) => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (reason) {
-      dispatch({ 
-        type: 'REJECT_PROMOTION', 
-        payload: { id: promotionId, adminId: currentUser.id, reason }
-      });
-      setSelectedPromotion(null);
-    }
-  };
-
-  const handleBulkVerify = () => {
-    if (bulkSelectedUsers.length > 0) {
-      dispatch({ type: 'BULK_VERIFY_USERS', payload: bulkSelectedUsers });
-      setBulkSelectedUsers([]);
-      setShowBulkActions(false);
-    }
-  };
-
-  const handleSuspendUser = (userId: string) => {
-    if (confirm('Are you sure you want to suspend this user?')) {
-      dispatch({ type: 'SUSPEND_USER', payload: userId });
-    }
-  };
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Wholesaler Analytics</h2>
-          
-          {/* Date Range Selector */}
-          <div className="flex items-center gap-3">
-            <select
-              value={analyticsDateRange}
-              onChange={(e) => setAnalyticsDateRange(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            >
-              <option value="daily">Last 24 Hours</option>
-              <option value="weekly">Last 7 Days</option>
-              <option value="monthly">Last 30 Days</option>
-              <option value="custom">Custom Range</option>
-            </select>
-            
-            {analyticsDateRange === 'custom' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={customDateFrom}
-                  onChange={(e) => setCustomDateFrom(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-                <span className="text-gray-500">to</span>
-                <input
-                  type="date"
-                  value={customDateTo}
-                  onChange={(e) => setCustomDateTo(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Wholesaler Selection */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Select Wholesaler</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {wholesalers.map((wholesaler) => {
-              const analytics = wholesalerAnalytics.find(a => a.wholesalerId === wholesaler.id);
-              return (
-                <button
-                  key={wholesaler.id}
-                  onClick={() => setSelectedWholesaler(selectedWholesaler === wholesaler.id ? null : wholesaler.id)}
-                  className={`p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                    selectedWholesaler === wholesaler.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="bg-gradient-to-r from-green-100 to-emerald-100 w-10 h-10 rounded-lg flex items-center justify-center">
-                      <Building className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{wholesaler.name}</h4>
-                      <p className="text-sm text-gray-500">{wholesaler.businessName}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-gray-500">Revenue:</span>
-                      <span className="ml-1 font-semibold text-green-600">R{analytics?.totalRevenue.toLocaleString() || 0}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Orders:</span>
-                      <span className="ml-1 font-semibold">{analytics?.totalOrders || 0}</span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Detailed Analytics for Selected Wholesaler */}
-        {selectedWholesaler && (
-          <div className="space-y-6">
-            {(() => {
-              const analytics = wholesalerAnalytics.find(a => a.wholesalerId === selectedWholesaler);
-              const wholesaler = wholesalers.find(w => w.id === selectedWholesaler);
-              
-              if (!analytics || !wholesaler) return null;
-              
-              return (
-                <>
-                  {/* Header */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900">{analytics.wholesalerName}</h3>
-                        <p className="text-gray-600">{analytics.businessName}</p>
-                        <p className="text-sm text-gray-500">Member since {new Date(analytics.joinDate).toLocaleDateString()}</p>
-                      </div>
-                      <button
-                        onClick={() => setSelectedWholesaler(null)}
-                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Sales & Revenue Section */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <DollarSign className="w-6 h-6 text-green-600" />
-                      Sales & Revenue
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-green-600">Total Revenue</p>
-                            <p className="text-2xl font-bold text-green-700">R{analytics.totalRevenue.toLocaleString()}</p>
-                          </div>
-                          <TrendingUp className="w-8 h-8 text-green-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-blue-600">Total Orders</p>
-                            <p className="text-2xl font-bold text-blue-700">{analytics.totalOrders}</p>
-                          </div>
-                          <ShoppingCart className="w-8 h-8 text-blue-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-purple-600">Avg Order Value</p>
-                            <p className="text-2xl font-bold text-purple-700">R{analytics.averageOrderValue.toFixed(0)}</p>
-                          </div>
-                          <Target className="w-8 h-8 text-purple-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl border border-orange-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-orange-600">Fulfillment Rate</p>
-                            <p className="text-2xl font-bold text-orange-700">{analytics.fulfillmentRate.toFixed(1)}%</p>
-                          </div>
-                          <CheckCircle className="w-8 h-8 text-orange-600" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Top Selling Products */}
-                    <div className="mb-6">
-                      <h5 className="text-lg font-semibold text-gray-900 mb-4">Top-Selling Products</h5>
-                      <div className="space-y-3">
-                        {analytics.topProducts.map((product, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-blue-100 w-8 h-8 rounded-lg flex items-center justify-center">
-                                <span className="text-blue-600 font-bold text-sm">#{index + 1}</span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">{product.name}</p>
-                                <p className="text-sm text-gray-500">{product.units} units sold</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-green-600">R{product.revenue.toLocaleString()}</p>
-                              <p className="text-sm text-gray-500">Revenue</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-      alert('Announcement broadcasted to all users!');
-                  {/* Customers & Market Reach */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <UsersIcon className="w-6 h-6 text-blue-600" />
-                      Customers & Market Reach
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-blue-600">Total Customers</p>
-                            <p className="text-2xl font-bold text-blue-700">{analytics.totalCustomers}</p>
-                          </div>
-                          <Users className="w-8 h-8 text-blue-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-green-600">Repeat Customer Rate</p>
-                            <p className="text-2xl font-bold text-green-700">{analytics.repeatCustomerRate.toFixed(1)}%</p>
-                          </div>
-                          <RefreshCw className="w-8 h-8 text-green-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-purple-600">Period Customers</p>
-                            <p className="text-2xl font-bold text-purple-700">{analytics.customerCount}</p>
-                          </div>
-                          <Activity className="w-8 h-8 text-purple-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-    }
-                  {/* Inventory & Stock */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <Package className="w-6 h-6 text-orange-600" />
-                      Inventory & Stock Management
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl border border-orange-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-orange-600">Stock Turnover</p>
-                            <p className="text-2xl font-bold text-orange-700">{analytics.stockTurnover.toFixed(1)}%</p>
-                          </div>
-                          <BarChart className="w-8 h-8 text-orange-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-red-600">Low Stock Items</p>
-                            <p className="text-2xl font-bold text-red-700">{state.products.filter(p => p.wholesalerId === selectedWholesaler && p.stock < p.minOrderQuantity * 2).length}</p>
-                          </div>
-                          <AlertTriangle className="w-8 h-8 text-red-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 p-4 rounded-xl border border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">Out of Stock</p>
-                            <p className="text-2xl font-bold text-gray-700">{state.products.filter(p => p.wholesalerId === selectedWholesaler && p.stock === 0).length}</p>
-                          </div>
-                          <AlertCircle className="w-8 h-8 text-gray-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-blue-600">Total Products</p>
-                            <p className="text-2xl font-bold text-blue-700">{analytics.totalProducts}</p>
-                          </div>
-                          <ShoppingBag className="w-8 h-8 text-blue-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-  };
-                  {/* Order Insights */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <Truck className="w-6 h-6 text-indigo-600" />
-                      Order Insights
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-green-600">Fulfillment Rate</p>
-                            <p className="text-2xl font-bold text-green-700">{analytics.fulfillmentRate.toFixed(1)}%</p>
-                          </div>
-                          <CheckCircle className="w-8 h-8 text-green-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-red-600">Return Rate</p>
-                            <p className="text-2xl font-bold text-red-700">{analytics.returnRate.toFixed(1)}%</p>
-                          </div>
-                          <RefreshCw className="w-8 h-8 text-red-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-yellow-600">Cancelled Orders</p>
-                            <p className="text-2xl font-bold text-yellow-700">{analytics.ordersByStatus.find(s => s.status === 'cancelled')?.count || 0}</p>
-                          </div>
-                          <X className="w-8 h-8 text-yellow-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-blue-600">Pending Orders</p>
-                            <p className="text-2xl font-bold text-blue-700">{analytics.ordersByStatus.find(s => s.status === 'pending')?.count || 0}</p>
-                          </div>
-                          <Clock className="w-8 h-8 text-blue-600" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Order Status Breakdown */}
-                    <div>
-                      <h5 className="text-lg font-semibold text-gray-900 mb-4">Order Status Breakdown</h5>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                        {analytics.ordersByStatus.map((status) => (
-                          <div key={status.status} className="bg-gray-50 p-3 rounded-lg text-center">
-                            <p className="text-sm text-gray-600 capitalize">{status.status}</p>
-                            <p className="text-xl font-bold text-gray-900">{status.count}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-  const toggleUserSelection = (userId: string) => {
-                  {/* Marketing & Promotions */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <Tag className="w-6 h-6 text-purple-600" />
-                      Marketing & Promotions
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-purple-600">Active Promotions</p>
-                            <p className="text-2xl font-bold text-purple-700">{analytics.activePromotions}</p>
-                          </div>
-                          <Percent className="w-8 h-8 text-purple-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-green-600">Promotion Revenue</p>
-                            <p className="text-2xl font-bold text-green-700">R{analytics.promotionPerformance.reduce((sum, p) => sum + p.revenue, 0).toLocaleString()}</p>
-                          </div>
-                          <TrendingUp className="w-8 h-8 text-green-600" />
-                        </div>
-                      </div>
-                    </div>
-    setBulkSelectedUsers(prev => 
-                    {/* Promotion Performance */}
-                    {analytics.promotionPerformance.length > 0 && (
-                      <div>
-                        <h5 className="text-lg font-semibold text-gray-900 mb-4">Promotion Performance</h5>
-                        <div className="space-y-3">
-                          {analytics.promotionPerformance.slice(0, 5).map((promo, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                              <div>
-                                <p className="font-medium text-gray-900">{promo.title}</p>
-                                <p className="text-sm text-gray-500">{promo.ordersGenerated} orders generated</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-green-600">R{promo.revenue.toLocaleString()}</p>
-                                <p className="text-sm text-gray-500">Revenue</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-      prev.includes(userId) 
-                  {/* Financial & Payments */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <CreditCard className="w-6 h-6 text-green-600" />
-                      Financial & Payments
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-green-600">Total Revenue</p>
-                            <p className="text-2xl font-bold text-green-700">R{analytics.totalRevenue.toLocaleString()}</p>
-                          </div>
-                          <DollarSign className="w-8 h-8 text-green-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-xl border border-yellow-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-yellow-600">Pending Payments</p>
-                            <p className="text-2xl font-bold text-yellow-700">{state.orders.filter(o => o.wholesalerId === selectedWholesaler && o.paymentStatus === 'pending').length}</p>
-                          </div>
-                          <Clock className="w-8 h-8 text-yellow-600" />
-                        </div>
-                      </div>
-                      
-                      <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-xl border border-red-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-red-600">Failed Payments</p>
-                            <p className="text-2xl font-bold text-red-700">{state.orders.filter(o => o.wholesalerId === selectedWholesaler && o.paymentStatus === 'failed').length}</p>
-                          </div>
-                          <AlertTriangle className="w-8 h-8 text-red-600" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-        ? prev.filter(id => id !== userId)
-                  {/* Revenue Trend Chart */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <LineChart className="w-6 h-6 text-blue-600" />
-                      Revenue Trends (Last 12 Months)
-                    </h4>
-                    
-                    <div className="space-y-3">
-                      {analytics.monthlyRevenue.map((month, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <span className="font-medium text-gray-900">{month.month}</span>
-                          <div className="flex items-center gap-3">
-                            <div className="w-32 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-blue-600 h-2 rounded-full" 
-                                style={{ 
-                                  width: `${Math.min(100, (month.revenue / Math.max(...analytics.monthlyRevenue.map(m => m.revenue))) * 100)}%` 
-                                }}
-                              ></div>
-                            </div>
-                            <span className="font-bold text-blue-600 min-w-[100px] text-right">R{month.revenue.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
-        : [...prev, userId]
-    );
-  };
+  const filteredPromotions = state.promotions.filter(promotion => {
+    const matchesSearch = promotion.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = promotionFilter === 'all' || promotion.status === promotionFilter;
+    return matchesSearch && matchesFilter;
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'suspended': return 'bg-red-100 text-red-800';
+      case 'completed': return 'bg-gray-100 text-gray-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       case 'approved': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -621,6 +208,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       case 'active': return <CheckCircle className="w-4 h-4" />;
       case 'pending': return <Clock className="w-4 h-4" />;
       case 'suspended': return <XCircle className="w-4 h-4" />;
+      case 'completed': return <CheckCircle className="w-4 h-4" />;
+      case 'cancelled': return <XCircle className="w-4 h-4" />;
       case 'approved': return <CheckCircle className="w-4 h-4" />;
       case 'rejected': return <XCircle className="w-4 h-4" />;
       default: return <AlertCircle className="w-4 h-4" />;
@@ -631,14 +220,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Admin Dashboard</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={handleBroadcastAnnouncement}
-            className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 font-medium text-sm"
-          >
-            <Bell className="w-4 h-4" />
-            Broadcast
-          </button>
+        <div className="text-sm text-gray-500">
+          Platform overview and management
         </div>
       </div>
 
@@ -659,11 +242,11 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pending Applications</p>
-              <p className="text-3xl font-bold text-gray-900">{pendingUsers.length}</p>
+              <p className="text-sm font-medium text-gray-600">Total Products</p>
+              <p className="text-3xl font-bold text-gray-900">{state.products.length}</p>
             </div>
-            <div className="bg-orange-100 p-3 rounded-xl">
-              <Clock className="w-6 h-6 text-orange-600" />
+            <div className="bg-green-100 p-3 rounded-xl">
+              <Package className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -674,8 +257,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               <p className="text-sm font-medium text-gray-600">Total Orders</p>
               <p className="text-3xl font-bold text-gray-900">{state.orders.length}</p>
             </div>
-            <div className="bg-green-100 p-3 rounded-xl">
-              <ShoppingCart className="w-6 h-6 text-green-600" />
+            <div className="bg-purple-100 p-3 rounded-xl">
+              <ShoppingCart className="w-6 h-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -683,22 +266,57 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pending Promotions</p>
-              <p className="text-3xl font-bold text-gray-900">{pendingPromotions.length}</p>
+              <p className="text-sm font-medium text-gray-600">Pending Applications</p>
+              <p className="text-3xl font-bold text-gray-900">{state.pendingUsers.length}</p>
             </div>
-            <div className="bg-purple-100 p-3 rounded-xl">
-              <Tag className="w-6 h-6 text-purple-600" />
+            <div className="bg-orange-100 p-3 rounded-xl">
+              <Clock className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button
+            onClick={() => setShowNewUser(true)}
+            className="flex items-center gap-3 p-4 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors font-medium"
+          >
+            <Plus className="w-5 h-5" />
+            Add New User
+          </button>
+          <button
+            onClick={handleBulkVerifyUsers}
+            className="flex items-center gap-3 p-4 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-colors font-medium"
+          >
+            <CheckCircle className="w-5 h-5" />
+            Verify All Users
+          </button>
+          <button
+            onClick={handleBroadcastAnnouncement}
+            className="flex items-center gap-3 p-4 bg-purple-50 text-purple-700 rounded-xl hover:bg-purple-100 transition-colors font-medium"
+          >
+            <Bell className="w-5 h-5" />
+            Send Announcement
+          </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-3 p-4 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium"
+          >
+            <Settings className="w-5 h-5" />
+            Platform Settings
+          </button>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Pending Applications</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Users</h3>
           <div className="space-y-3">
-            {pendingUsers.slice(0, 5).map((user) => (
+            {state.users.slice(0, 5).map((user) => (
               <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="bg-gray-100 w-10 h-10 rounded-lg flex items-center justify-center">
@@ -706,55 +324,38 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">{user.name}</p>
-                    <p className="text-sm text-gray-500">{user.role}</p>
+                    <p className="text-sm text-gray-500">{user.email}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleApproveUser(user.id)}
-                    className="bg-green-50 text-green-600 p-2 rounded-lg hover:bg-green-100 transition-colors"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleRejectUser(user.id)}
-                    className="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-100 transition-colors"
-                  >
-                    <UserX className="w-4 h-4" />
-                  </button>
-                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
+                  {getStatusIcon(user.status)}
+                  {user.status}
+                </span>
               </div>
             ))}
-            {pendingUsers.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No pending applications</p>
-            )}
           </div>
         </div>
 
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Orders</h3>
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="font-medium text-gray-900">New user registered</p>
-                <p className="text-sm text-gray-500">2 minutes ago</p>
+            {state.orders.slice(0, 5).map((order) => (
+              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gray-100 w-10 h-10 rounded-lg flex items-center justify-center">
+                    <ShoppingCart className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Order #{order.id}</p>
+                    <p className="text-sm text-gray-500">R{order.total.toLocaleString()}</p>
+                  </div>
+                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                  {getStatusIcon(order.status)}
+                  {order.status}
+                </span>
               </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="font-medium text-gray-900">Order completed</p>
-                <p className="text-sm text-gray-500">15 minutes ago</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
-              <Tag className="w-5 h-5 text-purple-600" />
-              <div>
-                <p className="font-medium text-gray-900">Promotion submitted</p>
-                <p className="text-sm text-gray-500">1 hour ago</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -765,25 +366,13 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">User Management</h2>
-        <div className="flex items-center gap-4">
-          {bulkSelectedUsers.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">{bulkSelectedUsers.length} selected</span>
-              <button
-                onClick={handleBulkVerify}
-                className="bg-green-50 text-green-600 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
-              >
-                Bulk Verify
-              </button>
-            </div>
-          )}
-          <button
-            onClick={() => setShowBulkActions(!showBulkActions)}
-            className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium"
-          >
-            Bulk Actions
-          </button>
-        </div>
+        <button
+          onClick={() => setShowNewUser(true)}
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          <Plus className="w-5 h-5" />
+          Add New User
+        </button>
       </div>
 
       {/* Search and Filter */}
@@ -821,53 +410,42 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         {filteredUsers.map((user) => (
           <div key={user.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {showBulkActions && (
-                  <input
-                    type="checkbox"
-                    checked={bulkSelectedUsers.includes(user.id)}
-                    onChange={() => toggleUserSelection(user.id)}
-                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                )}
-                <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-gray-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(user.status)}`}>
-                      {getStatusIcon(user.status)}
-                      {user.status}
-                    </span>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      user.role === 'wholesaler' ? 'bg-green-100 text-green-800' :
-                      user.role === 'retailer' ? 'bg-orange-100 text-orange-800' :
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                    {user.verified && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Verified
-                      </span>
-                    )}
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-gray-100 w-12 h-12 rounded-xl flex items-center justify-center">
+                    <User className="w-6 h-6 text-gray-600" />
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Email:</span>
-                      <span className="ml-2 font-medium">{user.email}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Business:</span>
-                      <span className="ml-2 font-medium">{user.businessName || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Joined:</span>
-                      <span className="ml-2 font-medium">{new Date(user.createdAt).toLocaleDateString()}</span>
-                    </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
+                    <p className="text-gray-600">{user.email}</p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                    user.role === 'wholesaler' ? 'bg-green-100 text-green-800' :
+                    user.role === 'retailer' ? 'bg-orange-100 text-orange-800' :
+                    user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
+                    {user.role}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(user.status)}`}>
+                    {getStatusIcon(user.status)}
+                    {user.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Business:</span>
+                    <span className="ml-2 font-medium">{user.businessName}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <span className="ml-2 font-medium">{user.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Verified:</span>
+                    <span className={`ml-2 font-medium ${user.verified ? 'text-green-600' : 'text-red-600'}`}>
+                      {user.verified ? 'Yes' : 'No'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -879,6 +457,14 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                   <Eye className="w-4 h-4" />
                   View Details
                 </button>
+                {!user.verified && (
+                  <button
+                    onClick={() => handleBulkVerifyUsers()}
+                    className="bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition-colors font-medium"
+                  >
+                    Verify
+                  </button>
+                )}
                 {user.status === 'active' && (
                   <button
                     onClick={() => handleSuspendUser(user.id)}
@@ -908,18 +494,14 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
             </div>
             
             <div className="space-y-6">
-              <div className="flex items-center space-x-6">
-                <div className="bg-gradient-to-r from-gray-100 to-gray-200 w-16 h-16 rounded-2xl flex items-center justify-center">
+              <div className="flex items-center space-x-4">
+                <div className="bg-gray-100 w-16 h-16 rounded-2xl flex items-center justify-center">
                   <User className="w-8 h-8 text-gray-600" />
                 </div>
                 <div>
                   <h4 className="text-xl font-bold text-gray-900">{selectedUser.name}</h4>
                   <p className="text-gray-600">{selectedUser.email}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedUser.status)}`}>
-                      {getStatusIcon(selectedUser.status)}
-                      {selectedUser.status}
-                    </span>
+                  <div className="flex gap-2 mt-2">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                       selectedUser.role === 'wholesaler' ? 'bg-green-100 text-green-800' :
                       selectedUser.role === 'retailer' ? 'bg-orange-100 text-orange-800' :
@@ -928,63 +510,149 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                     }`}>
                       {selectedUser.role}
                     </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedUser.status)}`}>
+                      {getStatusIcon(selectedUser.status)}
+                      {selectedUser.status}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3">Contact Information</h5>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Contact Information</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-400" />
-                      <span>{selectedUser.email}</span>
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Phone:</span>
+                      <span className="font-medium">{selectedUser.phone}</span>
                     </div>
-                    {selectedUser.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        <span>{selectedUser.phone}</span>
-                      </div>
-                    )}
-                    {selectedUser.address && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <span>{selectedUser.address}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Email:</span>
+                      <span className="font-medium">{selectedUser.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Address:</span>
+                      <span className="font-medium">{selectedUser.address}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3">Account Details</h5>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Business Information</h5>
                   <div className="space-y-2 text-sm">
-                    {selectedUser.businessName && (
-                      <div className="flex items-center gap-2">
-                        <Building className="w-4 h-4 text-gray-400" />
-                        <span>{selectedUser.businessName}</span>
-                      </div>
-                    )}
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span>Joined {new Date(selectedUser.createdAt).toLocaleDateString()}</span>
+                      <Building className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Business:</span>
+                      <span className="font-medium">{selectedUser.businessName}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {selectedUser.verified ? (
-                        <>
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="text-green-600">Verified Account</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="w-4 h-4 text-red-500" />
-                          <span className="text-red-600">Unverified Account</span>
-                        </>
-                      )}
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Joined:</span>
+                      <span className="font-medium">{new Date(selectedUser.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Verified:</span>
+                      <span className={`font-medium ${selectedUser.verified ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedUser.verified ? 'Yes' : 'No'}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* New User Modal */}
+      {showNewUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-md">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Add New User</h3>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Name</label>
+                <input
+                  type="text"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({...newUser, role: e.target.value as any})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                >
+                  <option value="retailer">Retailer</option>
+                  <option value="wholesaler">Wholesaler</option>
+                  <option value="admin">Admin</option>
+                  <option value="support">Support</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Business Name</label>
+                <input
+                  type="text"
+                  value={newUser.businessName}
+                  onChange={(e) => setNewUser({...newUser, businessName: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <input
+                  type="tel"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Address</label>
+                <textarea
+                  value={newUser.address}
+                  onChange={(e) => setNewUser({...newUser, address: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  rows={3}
+                  required
+                />
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowNewUser(false)}
+                  className="flex-1 px-4 py-2 sm:py-3 border border-gray-200 text-gray-700 rounded-lg sm:rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm sm:text-base"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 font-medium text-sm sm:text-base"
+                >
+                  Create User
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -995,286 +663,86 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Pending Applications</h2>
-        <div className="flex items-center gap-4">
-          <select
-            value={pendingFilter}
-            onChange={(e) => setPendingFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Roles</option>
-            <option value="wholesaler">Wholesalers</option>
-            <option value="retailer">Retailers</option>
-          </select>
-          <div className="text-sm text-gray-500">
-            {filteredPendingUsers.length} applications
-          </div>
+        <div className="text-sm text-gray-500">
+          {state.pendingUsers.length} applications awaiting review
         </div>
       </div>
 
-      {/* Search */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search applications..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {/* Applications List */}
       <div className="space-y-4">
-        {filteredPendingUsers.map((user) => (
-          <div key={user.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
+        {state.pendingUsers.map((pendingUser) => (
+          <div key={pendingUser.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="bg-orange-100 w-12 h-12 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-orange-600" />
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-orange-100 w-12 h-12 rounded-xl flex items-center justify-center">
+                    <User className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{pendingUser.name}</h3>
+                    <p className="text-gray-600">{pendingUser.email}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    pendingUser.role === 'wholesaler' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                  }`}>
+                    {pendingUser.role}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      user.role === 'wholesaler' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      <Clock className="w-3 h-3" />
-                      Pending
-                    </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm mb-4">
+                  <div>
+                    <span className="text-gray-500">Business:</span>
+                    <span className="ml-2 font-medium">{pendingUser.businessName}</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Email:</span>
-                      <span className="ml-2 font-medium">{user.email}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Business:</span>
-                      <span className="ml-2 font-medium">{user.businessName}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Submitted:</span>
-                      <span className="ml-2 font-medium">{new Date(user.submittedAt).toLocaleDateString()}</span>
-                    </div>
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <span className="ml-2 font-medium">{pendingUser.phone}</span>
                   </div>
+                  <div>
+                    <span className="text-gray-500">Submitted:</span>
+                    <span className="ml-2 font-medium">{new Date(pendingUser.submittedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <span className="text-gray-500 text-sm">Registration Reason:</span>
+                  <p className="text-gray-900 font-medium mt-1">{pendingUser.registrationReason}</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setSelectedPendingUser(user)}
+                  onClick={() => setSelectedPendingUser(pendingUser)}
                   className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center gap-2"
                 >
                   <Eye className="w-4 h-4" />
-                  Review
+                  View Details
                 </button>
                 <button
-                  onClick={() => handleApproveUser(user.id)}
-                  className="bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition-colors font-medium flex items-center gap-2"
+                  onClick={() => handleApproveUser(pendingUser.id)}
+                  className="bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition-colors font-medium"
                 >
-                  <UserCheck className="w-4 h-4" />
                   Approve
                 </button>
                 <button
-                  onClick={() => handleRejectUser(user.id)}
-                  className="bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors font-medium flex items-center gap-2"
+                  onClick={() => {
+                    const reason = prompt('Rejection reason:');
+                    if (reason) {
+                      handleRejectUser(pendingUser.id, reason);
+                    }
+                  }}
+                  className="bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors font-medium"
                 >
-                  <UserX className="w-4 h-4" />
                   Reject
                 </button>
               </div>
-    const wholesalers = state.users.filter(u => u.role === 'wholesaler');
-    
-    // Generate comprehensive analytics for each wholesaler
-    const generateWholesalerAnalytics = (wholesaler: User): WholesalerAnalytics => {
-      const wholesalerOrders = state.orders.filter(o => o.wholesalerId === wholesaler.id);
-      const wholesalerProducts = state.products.filter(p => p.wholesalerId === wholesaler.id);
-      const wholesalerPromotions = state.promotions.filter(p => p.wholesalerId === wholesaler.id);
-      const wholesalerReturns = state.returnRequests.filter(r => r.wholesalerId === wholesaler.id);
-      
-      // Calculate date range
-      const now = new Date();
-      let startDate = new Date();
-      
-      switch (analyticsDateRange) {
-        case 'daily':
-          startDate.setDate(now.getDate() - 1);
-          break;
-        case 'weekly':
-          startDate.setDate(now.getDate() - 7);
-          break;
-        case 'monthly':
-          startDate.setMonth(now.getMonth() - 1);
-          break;
-        case 'custom':
-          startDate = customDateFrom ? new Date(customDateFrom) : new Date(now.getFullYear(), 0, 1);
-          break;
-        default:
-          startDate.setMonth(now.getMonth() - 1);
-      }
-      
-      const endDate = analyticsDateRange === 'custom' && customDateTo ? new Date(customDateTo) : now;
-      
-      // Filter orders by date range
-      const periodOrders = wholesalerOrders.filter(o => {
-        const orderDate = new Date(o.createdAt);
-        return orderDate >= startDate && orderDate <= endDate;
-      });
-      
-      // Sales & Revenue calculations
-      const totalRevenue = periodOrders.reduce((sum, order) => sum + order.total, 0);
-      const totalOrders = periodOrders.length;
-      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-      
-      // Customer analytics
-      const uniqueCustomers = new Set(periodOrders.map(o => o.retailerId)).size;
-      const allCustomers = new Set(wholesalerOrders.map(o => o.retailerId));
-      const totalCustomers = allCustomers.size;
-      
-      // Calculate returning customers
-      const customerOrderCounts = wholesalerOrders.reduce((acc, order) => {
-        acc[order.retailerId] = (acc[order.retailerId] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const returningCustomers = Object.values(customerOrderCounts).filter(count => count > 1).length;
-      const newCustomers = totalCustomers - returningCustomers;
-      const repeatCustomerRate = totalCustomers > 0 ? (returningCustomers / totalCustomers) * 100 : 0;
-      
-      // Top products calculation
-      const productSales = periodOrders.reduce((acc, order) => {
-        order.items.forEach(item => {
-          if (!acc[item.productId]) {
-            acc[item.productId] = {
-              name: item.productName,
-              sales: 0,
-              revenue: 0,
-              units: 0
-            };
-          }
-          acc[item.productId].sales += item.quantity;
-          acc[item.productId].revenue += item.total;
-          acc[item.productId].units += item.quantity;
-        });
-        return acc;
-      }, {} as Record<string, { name: string; sales: number; revenue: number; units: number }>);
-      
-      const topProducts = Object.values(productSales)
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
-      
-      // Monthly revenue trend
-      const monthlyRevenue = [];
-      for (let i = 11; i >= 0; i--) {
-        const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-        const monthOrders = wholesalerOrders.filter(o => {
-          const orderDate = new Date(o.createdAt);
-          return orderDate >= monthStart && orderDate <= monthEnd;
-        });
-        const monthRevenue = monthOrders.reduce((sum, order) => sum + order.total, 0);
-        monthlyRevenue.push({
-          month: monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          revenue: monthRevenue
-        });
-      }
-      
-      // Order status breakdown
-      const ordersByStatus = [
-        { status: 'completed', count: wholesalerOrders.filter(o => o.status === 'completed').length },
-        { status: 'pending', count: wholesalerOrders.filter(o => o.status === 'pending').length },
-        { status: 'accepted', count: wholesalerOrders.filter(o => o.status === 'accepted').length },
-        { status: 'ready', count: wholesalerOrders.filter(o => o.status === 'ready').length },
-        { status: 'cancelled', count: wholesalerOrders.filter(o => o.status === 'cancelled').length }
-      ];
-      
-      // Inventory calculations
-      const lowStockProducts = wholesalerProducts.filter(p => p.stock < p.minOrderQuantity * 2);
-      const outOfStockProducts = wholesalerProducts.filter(p => p.stock === 0);
-      
-      // Calculate stock turnover (simplified)
-      const totalStock = wholesalerProducts.reduce((sum, p) => sum + p.stock, 0);
-      const totalSold = periodOrders.reduce((sum, order) => 
-        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
-      );
-      const stockTurnover = totalStock > 0 ? (totalSold / totalStock) * 100 : 0;
-      
-      // Financial calculations
-      const completedOrders = periodOrders.filter(o => o.status === 'completed');
-      const pendingPayments = periodOrders.filter(o => o.paymentStatus === 'pending');
-      const failedPayments = periodOrders.filter(o => o.paymentStatus === 'failed');
-      
-      const fulfillmentRate = totalOrders > 0 ? (completedOrders.length / totalOrders) * 100 : 0;
-      const cancelledOrders = periodOrders.filter(o => o.status === 'cancelled').length;
-      const returnRate = totalOrders > 0 ? (wholesalerReturns.length / totalOrders) * 100 : 0;
-      
-      // Promotion effectiveness
-      const activePromotions = wholesalerPromotions.filter(p => p.active && p.status === 'approved').length;
-      const promotionPerformance = wholesalerPromotions
-        .filter(p => p.status === 'approved')
-        .map(promo => ({
-          title: promo.title,
-          ordersGenerated: periodOrders.filter(o => 
-            o.items.some(item => promo.productIds.includes(item.productId))
-          ).length,
-          revenue: periodOrders
-            .filter(o => o.items.some(item => promo.productIds.includes(item.productId)))
-            .reduce((sum, order) => sum + order.total, 0)
-        }));
-      
-      return {
-        wholesalerId: wholesaler.id,
-        wholesalerName: wholesaler.name,
-        businessName: wholesaler.businessName || 'N/A',
-        totalRevenue,
-        totalOrders,
-        totalProducts: wholesalerProducts.length,
-        activePromotions,
-        averageOrderValue,
-        monthlyRevenue,
-        ordersByStatus,
-        topProducts,
-        customerCount: uniqueCustomers,
-        repeatCustomerRate,
-        stockTurnover,
-        promotionPerformance,
-        recentActivity: [
-          { date: new Date().toLocaleDateString(), activity: 'Total Revenue', value: `R${totalRevenue.toLocaleString()}` },
-          { date: new Date().toLocaleDateString(), activity: 'Orders Processed', value: totalOrders.toString() },
-          { date: new Date().toLocaleDateString(), activity: 'Active Products', value: wholesalerProducts.filter(p => p.available).length.toString() }
-        ],
-        joinDate: wholesaler.createdAt,
-        lastOrderDate: wholesalerOrders.length > 0 ? wholesalerOrders[wholesalerOrders.length - 1].createdAt : 'No orders yet',
-        totalCustomers,
-        averageRating: 4.5, // Placeholder - would be calculated from reviews
-        supportTickets: state.tickets.filter(t => t.userId === wholesaler.id).length,
-        returnRate,
-        fulfillmentRate
-      };
-    };
-    
-    const wholesalerAnalytics = wholesalers.map(generateWholesalerAnalytics);
-    
             </div>
           </div>
-        {filteredPendingUsers.length === 0 && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-12 text-center">
-            <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pending Applications</h3>
-            <p className="text-gray-500">All applications have been processed.</p>
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* Application Details Modal */}
+      {/* Pending User Details Modal */}
       {selectedPendingUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
           <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Application Review</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Application Details</h3>
               <button
                 onClick={() => setSelectedPendingUser(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1284,106 +752,85 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
             </div>
             
             <div className="space-y-6">
-              <div className="flex items-center space-x-6">
-                <div className="bg-gradient-to-r from-orange-100 to-amber-100 w-16 h-16 rounded-2xl flex items-center justify-center">
+              <div className="flex items-center space-x-4">
+                <div className="bg-orange-100 w-16 h-16 rounded-2xl flex items-center justify-center">
                   <User className="w-8 h-8 text-orange-600" />
                 </div>
                 <div>
                   <h4 className="text-xl font-bold text-gray-900">{selectedPendingUser.name}</h4>
                   <p className="text-gray-600">{selectedPendingUser.email}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedPendingUser.role === 'wholesaler' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {selectedPendingUser.role}
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      <Clock className="w-3 h-3" />
-                      Pending Review
-                    </span>
-                  </div>
+                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedPendingUser.role === 'wholesaler' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                  }`}>
+                    Applying as {selectedPendingUser.role}
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Building className="w-5 h-5" />
-                    Business Information
-                  </h5>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Business Name</label>
-                      <p className="text-gray-900 font-medium">{selectedPendingUser.businessName}</p>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Contact Information</h5>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Phone:</span>
+                      <span className="font-medium">{selectedPendingUser.phone}</span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Phone</label>
-                      <p className="text-gray-900 font-medium flex items-center gap-2">
-                        <Phone className="w-4 h-4" />
-                        {selectedPendingUser.phone}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Email:</span>
+                      <span className="font-medium">{selectedPendingUser.email}</span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Address</label>
-                      <p className="text-gray-900 font-medium flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        {selectedPendingUser.address}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Address:</span>
+                      <span className="font-medium">{selectedPendingUser.address}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    Application Details
-                  </h5>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Email</label>
-                      <p className="text-gray-900 font-medium flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {selectedPendingUser.email}
-                      </p>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Business Information</h5>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Building className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Business:</span>
+                      <span className="font-medium">{selectedPendingUser.businessName}</span>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Applied As</label>
-                      <p className="text-gray-900 font-medium capitalize">{selectedPendingUser.role}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">Submitted</label>
-                      <p className="text-gray-900 font-medium flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(selectedPendingUser.submittedAt).toLocaleDateString()}
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-600">Submitted:</span>
+                      <span className="font-medium">{new Date(selectedPendingUser.submittedAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h5 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Registration Reason
-                </h5>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-700">{selectedPendingUser.registrationReason}</p>
-                </div>
+                <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Registration Reason</h5>
+                <p className="text-gray-600 bg-gray-50 p-3 sm:p-4 rounded-lg text-sm sm:text-base">{selectedPendingUser.registrationReason}</p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
                 <button
-                  onClick={() => handleApproveUser(selectedPendingUser.id)}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
+                  onClick={() => {
+                    handleApproveUser(selectedPendingUser.id);
+                    setSelectedPendingUser(null);
+                  }}
+                  className="flex-1 bg-green-50 text-green-600 px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:bg-green-100 transition-colors font-medium text-sm sm:text-base"
                 >
-                  <UserCheck className="w-5 h-5" />
                   Approve Application
                 </button>
                 <button
-                  onClick={() => handleRejectUser(selectedPendingUser.id)}
-                  className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 text-white px-4 py-3 rounded-xl hover:from-red-700 hover:to-pink-700 transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
+                  onClick={() => {
+                    const reason = prompt('Rejection reason:');
+                    if (reason) {
+                      handleRejectUser(selectedPendingUser.id, reason);
+                      setSelectedPendingUser(null);
+                    }
+                  }}
+                  className="flex-1 bg-red-50 text-red-600 px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:bg-red-100 transition-colors font-medium text-sm sm:text-base"
                 >
-                  <UserX className="w-5 h-5" />
                   Reject Application
                 </button>
               </div>
@@ -1396,112 +843,302 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
   const renderOrders = () => (
     <div className="space-y-6">
-      <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">All Orders</h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Statistics</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Orders:</span>
-              <span className="font-bold text-gray-900">{state.orders.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Pending:</span>
-              <span className="font-bold text-yellow-600">{state.orders.filter(o => o.status === 'pending').length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Completed:</span>
-              <span className="font-bold text-green-600">{state.orders.filter(o => o.status === 'completed').length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Revenue:</span>
-              <span className="font-bold text-green-600">R{state.orders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
-          <div className="space-y-3">
-            {state.orders.slice(0, 5).map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Order #{order.id}</p>
-                  <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">R{order.total.toLocaleString()}</p>
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                    {getStatusIcon(order.status)}
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">All Orders</h2>
+        <div className="flex items-center gap-4">
+          <select
+            value={orderFilter}
+            onChange={(e) => setOrderFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="ready">Ready</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <div className="text-sm text-gray-500">
+            {filteredOrders.length} orders
           </div>
         </div>
       </div>
+
+      <div className="space-y-4">
+        {filteredOrders.map((order) => (
+          <div key={order.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-lg font-bold text-gray-900">Order #{order.id}</h3>
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                    {getStatusIcon(order.status)}
+                    {order.status}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                    order.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {order.paymentStatus}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <span className="ml-2 font-medium">{new Date(order.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Total:</span>
+                    <span className="ml-2 font-bold text-green-600">R{order.total.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Items:</span>
+                    <span className="ml-2 font-medium">{order.items.length}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Retailer:</span>
+                    <span className="ml-2 font-medium">#{order.retailerId}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedOrder(order)}
+                  className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  View Details
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Order #{selectedOrder.id}</h3>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Order Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 text-xs sm:text-sm">Status:</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
+                        {getStatusIcon(selectedOrder.status)}
+                        {selectedOrder.status}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 text-xs sm:text-sm">Date:</span>
+                      <span className="font-medium text-xs sm:text-sm">{new Date(selectedOrder.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 text-xs sm:text-sm">Total:</span>
+                      <span className="font-bold text-green-600 text-sm sm:text-base">R{selectedOrder.total.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Payment</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 text-xs sm:text-sm">Status:</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedOrder.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                        selectedOrder.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedOrder.paymentStatus}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-4 text-sm sm:text-base">Order Items</h4>
+                <div className="space-y-3">
+                  {selectedOrder.items.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2">{item.productName}</h5>
+                        <p className="text-xs sm:text-sm text-gray-500">Quantity: {item.quantity}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900 text-sm sm:text-base">R{item.total.toLocaleString()}</p>
+                        <p className="text-xs sm:text-sm text-gray-500">R{item.price} each</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   const renderProducts = () => (
     <div className="space-y-6">
-      <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">All Products</h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Statistics</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Products:</span>
-              <span className="font-bold text-gray-900">{state.products.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Available:</span>
-              <span className="font-bold text-green-600">{state.products.filter(p => p.available).length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Out of Stock:</span>
-              <span className="font-bold text-red-600">{state.products.filter(p => p.stock === 0).length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Categories:</span>
-              <span className="font-bold text-blue-600">{new Set(state.products.map(p => p.category)).size}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Products</h3>
-          <div className="space-y-3">
-            {state.products.slice(0, 5).map((product) => (
-              <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="bg-gray-100 w-10 h-10 rounded-lg flex items-center justify-center">
-                    <Package className="w-5 h-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-sm text-gray-500">{product.category}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900">R{product.price}</p>
-                  <p className="text-sm text-gray-500">Stock: {product.stock}</p>
-                </div>
-              </div>
-            ))}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">All Products</h2>
+        <div className="flex items-center gap-4">
+          <select
+            value={productFilter}
+            onChange={(e) => setProductFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Products</option>
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+          <div className="text-sm text-gray-500">
+            {filteredProducts.length} products
           </div>
         </div>
       </div>
+
+      {/* Search */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        {filteredProducts.map((product) => (
+          <div key={product.id} className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-300">
+            <img 
+              src={product.imageUrl} 
+              alt={product.name}
+              className="w-full h-32 sm:h-48 object-cover"
+            />
+            <div className="p-3 sm:p-6">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="font-bold text-base sm:text-lg line-clamp-2 text-gray-900">{product.name}</h3>
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ml-2">
+                  {product.category}
+                </span>
+              </div>
+              <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">{product.description}</p>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-xs sm:text-sm text-gray-500">Price:</span>
+                  <span className="font-bold text-green-600 text-sm sm:text-base">R{product.price}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs sm:text-sm text-gray-500">Stock:</span>
+                  <span className="font-medium text-gray-900 text-sm sm:text-base">{product.stock}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs sm:text-sm text-gray-500">Status:</span>
+                  <span className={`font-medium text-sm sm:text-base ${product.available ? 'text-green-600' : 'text-red-600'}`}>
+                    {product.available ? 'Available' : 'Unavailable'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedProduct(product)}
+                className="w-full bg-blue-50 text-blue-600 py-2 sm:py-3 rounded-lg hover:bg-blue-100 transition-colors font-medium flex items-center justify-center gap-2 text-sm sm:text-base"
+              >
+                <Eye className="w-4 h-4" />
+                View Details
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Product Details</h3>
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <img 
+                  src={selectedProduct.imageUrl} 
+                  alt={selectedProduct.name}
+                  className="w-full sm:w-48 h-48 object-cover rounded-xl"
+                />
+                <div className="flex-1">
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">{selectedProduct.name}</h4>
+                  <p className="text-gray-600 mb-4">{selectedProduct.description}</p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Category:</span>
+                      <span className="font-medium">{selectedProduct.category}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Price:</span>
+                      <span className="font-bold text-green-600">R{selectedProduct.price}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Stock:</span>
+                      <span className="font-medium">{selectedProduct.stock}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Min Order:</span>
+                      <span className="font-medium">{selectedProduct.minOrderQuantity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Status:</span>
+                      <span className={`font-medium ${selectedProduct.available ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedProduct.available ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Created:</span>
+                      <span className="font-medium">{new Date(selectedProduct.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   const renderPromotions = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Promotion Management</h2>
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Promotions</h2>
         <div className="flex items-center gap-4">
           <select
             value={promotionFilter}
@@ -1519,6 +1156,20 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         </div>
       </div>
 
+      {/* Search */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search promotions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
       <div className="space-y-4">
         {filteredPromotions.map((promotion) => (
           <div key={promotion.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
@@ -1530,7 +1181,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                     {getStatusIcon(promotion.status)}
                     {promotion.status}
                   </span>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
                     {promotion.discount}% OFF
                   </span>
                 </div>
@@ -1560,7 +1211,12 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                       Approve
                     </button>
                     <button
-                      onClick={() => handleRejectPromotion(promotion.id)}
+                      onClick={() => {
+                        const reason = prompt('Rejection reason:');
+                        if (reason) {
+                          handleRejectPromotion(promotion.id, reason);
+                        }
+                      }}
                       className="bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors font-medium"
                     >
                       Reject
@@ -1597,57 +1253,57 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
             <div className="space-y-6">
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <h4 className="text-lg font-bold text-gray-900">{selectedPromotion.title}</h4>
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 line-clamp-2">{selectedPromotion.title}</h4>
                   <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(selectedPromotion.status)}`}>
                     {getStatusIcon(selectedPromotion.status)}
                     {selectedPromotion.status}
                   </span>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
                     {selectedPromotion.discount}% OFF
                   </span>
                 </div>
-                <p className="text-gray-600 mb-4">{selectedPromotion.description}</p>
+                <p className="text-gray-600 mb-4 text-sm sm:text-base">{selectedPromotion.description}</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3">Promotion Details</h5>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Promotion Details</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Discount:</span>
-                      <span className="font-medium text-purple-600">{selectedPromotion.discount}%</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">Discount:</span>
+                      <span className="font-bold text-red-600 text-sm sm:text-base">{selectedPromotion.discount}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Valid From:</span>
-                      <span className="font-medium">{new Date(selectedPromotion.validFrom).toLocaleDateString()}</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">Valid From:</span>
+                      <span className="font-medium text-xs sm:text-sm">{new Date(selectedPromotion.validFrom).toLocaleDateString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Valid To:</span>
-                      <span className="font-medium">{new Date(selectedPromotion.validTo).toLocaleDateString()}</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">Valid To:</span>
+                      <span className="font-medium text-xs sm:text-sm">{new Date(selectedPromotion.validTo).toLocaleDateString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Products:</span>
-                      <span className="font-medium">{selectedPromotion.productIds.length}</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">Products:</span>
+                      <span className="font-medium text-xs sm:text-sm">{selectedPromotion.productIds.length}</span>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3">Status Information</h5>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Status Information</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Submitted:</span>
-                      <span className="font-medium">{new Date(selectedPromotion.submittedAt).toLocaleDateString()}</span>
+                      <span className="text-gray-500 text-xs sm:text-sm">Submitted:</span>
+                      <span className="font-medium text-xs sm:text-sm">{new Date(selectedPromotion.submittedAt).toLocaleDateString()}</span>
                     </div>
                     {selectedPromotion.reviewedAt && (
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Reviewed:</span>
-                        <span className="font-medium">{new Date(selectedPromotion.reviewedAt).toLocaleDateString()}</span>
+                        <span className="text-gray-500 text-xs sm:text-sm">Reviewed:</span>
+                        <span className="font-medium text-xs sm:text-sm">{new Date(selectedPromotion.reviewedAt).toLocaleDateString()}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Active:</span>
-                      <span className={`font-medium ${selectedPromotion.active ? 'text-green-600' : 'text-red-600'}`}>
+                      <span className="text-gray-500 text-xs sm:text-sm">Active:</span>
+                      <span className={`font-medium text-xs sm:text-sm ${selectedPromotion.active ? 'text-green-600' : 'text-red-600'}`}>
                         {selectedPromotion.active ? 'Yes' : 'No'}
                       </span>
                     </div>
@@ -1657,10 +1313,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
               {selectedPromotion.rejectionReason && (
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3">Rejection Reason</h5>
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <p className="text-red-700">{selectedPromotion.rejectionReason}</p>
-                  </div>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm sm:text-base">Rejection Reason</h5>
+                  <p className="text-red-600 bg-red-50 p-3 sm:p-4 rounded-lg text-sm sm:text-base">{selectedPromotion.rejectionReason}</p>
                 </div>
               )}
 
@@ -1671,16 +1325,19 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                       handleApprovePromotion(selectedPromotion.id);
                       setSelectedPromotion(null);
                     }}
-                    className="flex-1 bg-green-50 text-green-600 px-4 py-3 rounded-xl hover:bg-green-100 transition-colors font-medium"
+                    className="flex-1 bg-green-50 text-green-600 px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:bg-green-100 transition-colors font-medium text-sm sm:text-base"
                   >
                     Approve Promotion
                   </button>
                   <button
                     onClick={() => {
-                      handleRejectPromotion(selectedPromotion.id);
-                      setSelectedPromotion(null);
+                      const reason = prompt('Rejection reason:');
+                      if (reason) {
+                        handleRejectPromotion(selectedPromotion.id, reason);
+                        setSelectedPromotion(null);
+                      }
                     }}
-                    className="flex-1 bg-red-50 text-red-600 px-4 py-3 rounded-xl hover:bg-red-100 transition-colors font-medium"
+                    className="flex-1 bg-red-50 text-red-600 px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:bg-red-100 transition-colors font-medium text-sm sm:text-base"
                   >
                     Reject Promotion
                   </button>
@@ -1697,49 +1354,141 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     <div className="space-y-6">
       <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Wholesaler Analytics</h2>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Performing Wholesalers</h3>
-          <div className="space-y-3">
-            {state.users.filter(u => u.role === 'wholesaler').slice(0, 5).map((wholesaler, index) => (
-              <div key={wholesaler.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="bg-green-100 w-8 h-8 rounded-lg flex items-center justify-center">
-                    <span className="text-green-600 font-bold text-sm">{index + 1}</span>
+      {/* Analytics Overview */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+              <p className="text-3xl font-bold text-gray-900">R{state.orders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-xl">
+              <DollarSign className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Wholesalers</p>
+              <p className="text-3xl font-bold text-gray-900">{state.users.filter(u => u.role === 'wholesaler').length}</p>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-xl">
+              <Users className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Products</p>
+              <p className="text-3xl font-bold text-gray-900">{state.products.length}</p>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-xl">
+              <Package className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Active Promotions</p>
+              <p className="text-3xl font-bold text-gray-900">{state.promotions.filter(p => p.active).length}</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-xl">
+              <Tag className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Wholesaler Performance */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Top Performing Wholesalers</h3>
+        <div className="space-y-4">
+          {state.users.filter(u => u.role === 'wholesaler').slice(0, 5).map((wholesaler, index) => {
+            const wholesalerOrders = state.orders.filter(o => o.wholesalerId === wholesaler.id);
+            const totalRevenue = wholesalerOrders.reduce((sum, order) => sum + order.total, 0);
+            const totalProducts = state.products.filter(p => p.wholesalerId === wholesaler.id).length;
+            
+            return (
+              <div key={wholesaler.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="bg-gradient-to-r from-blue-100 to-indigo-100 w-12 h-12 rounded-xl flex items-center justify-center">
+                    <span className="font-bold text-blue-600">#{index + 1}</span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{wholesaler.name}</p>
+                    <h4 className="font-bold text-gray-900">{wholesaler.name}</h4>
                     <p className="text-sm text-gray-500">{wholesaler.businessName}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">R{(Math.random() * 100000).toFixed(0)}</p>
-                  <p className="text-sm text-gray-500">Revenue</p>
+                  <p className="font-bold text-green-600">R{totalRevenue.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500">{totalProducts} products • {wholesalerOrders.length} orders</p>
                 </div>
               </div>
-            ))}
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Order Status Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Order Status Distribution</h3>
+          <div className="space-y-3">
+            {['pending', 'accepted', 'ready', 'completed', 'cancelled'].map(status => {
+              const count = state.orders.filter(o => o.status === status).length;
+              const percentage = state.orders.length > 0 ? (count / state.orders.length) * 100 : 0;
+              
+              return (
+                <div key={status} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+                      {getStatusIcon(status)}
+                      {status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ width: `${percentage}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 w-8">{count}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Metrics</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Revenue:</span>
-              <span className="font-bold text-green-600">R{state.orders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Active Wholesalers:</span>
-              <span className="font-bold text-blue-600">{state.users.filter(u => u.role === 'wholesaler' && u.status === 'active').length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Active Retailers:</span>
-              <span className="font-bold text-orange-600">{state.users.filter(u => u.role === 'retailer' && u.status === 'active').length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Monthly Growth:</span>
-              <span className="font-bold text-green-600">+12.5%</span>
-            </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">Product Categories</h3>
+          <div className="space-y-3">
+            {[...new Set(state.products.map(p => p.category))].map(category => {
+              const count = state.products.filter(p => p.category === category).length;
+              const percentage = state.products.length > 0 ? (count / state.products.length) * 100 : 0;
+              
+              return (
+                <div key={category} className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-900">{category}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-600 h-2 rounded-full" 
+                        style={{ width: `${percentage}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900 w-8">{count}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1748,47 +1497,62 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
   const renderSettings = () => (
     <div className="space-y-6">
-      <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Platform Settings</h2>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            General Settings
-          </h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Platform Settings</h2>
+        <div className="flex gap-3">
+          {settingsChanged && (
+            <button
+              onClick={handleSaveSettings}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              <Save className="w-5 h-5" />
+              Save Changes
+            </button>
+          )}
+          <button
+            onClick={handleResetSettings}
+            className="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-200 transition-colors font-semibold"
+          >
+            <RefreshCw className="w-5 h-5 inline mr-2" />
+            Reset to Default
+          </button>
+        </div>
+      </div>
+
+      {/* General Settings */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <Settings className="w-6 h-6" />
+          General Settings
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">User Registration</p>
-                <p className="text-sm text-gray-500">Allow new user registrations</p>
+                <label className="font-medium text-gray-900">User Registration</label>
+                <p className="text-sm text-gray-500">Allow new users to register</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.userRegistrationEnabled}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { userRegistrationEnabled: e.target.checked }
-                  })}
+                  checked={platformSettings.userRegistrationEnabled}
+                  onChange={(e) => handleUpdateSettings('userRegistrationEnabled', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Email Notifications</p>
+                <label className="font-medium text-gray-900">Email Notifications</label>
                 <p className="text-sm text-gray-500">Send email notifications to users</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.emailNotificationsEnabled}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { emailNotificationsEnabled: e.target.checked }
-                  })}
+                  checked={platformSettings.emailNotificationsEnabled}
+                  onChange={(e) => handleUpdateSettings('emailNotificationsEnabled', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1797,17 +1561,14 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Auto-approve Promotions</p>
-                <p className="text-sm text-gray-500">Automatically approve new promotions</p>
+                <label className="font-medium text-gray-900">Auto-approve Promotions</label>
+                <p className="text-sm text-gray-500">Automatically approve promotion requests</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.autoApprovePromotions}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { autoApprovePromotions: e.target.checked }
-                  })}
+                  checked={platformSettings.autoApprovePromotions}
+                  onChange={(e) => handleUpdateSettings('autoApprovePromotions', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1816,110 +1577,89 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Maintenance Mode</p>
-                <p className="text-sm text-gray-500">Put platform in maintenance mode</p>
+                <label className="font-medium text-gray-900">Maintenance Mode</label>
+                <p className="text-sm text-gray-500">Put the platform in maintenance mode</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.maintenanceMode}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { maintenanceMode: e.target.checked }
-                  })}
+                  checked={platformSettings.maintenanceMode}
+                  onChange={(e) => handleUpdateSettings('maintenanceMode', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
               </label>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
-            Business Settings
-          </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Commission Rate (%)</label>
+              <label className="block font-medium text-gray-900 mb-2">Commission Rate (%)</label>
               <input
                 type="number"
-                value={state.platformSettings.commissionRate}
-                onChange={(e) => dispatch({ 
-                  type: 'UPDATE_PLATFORM_SETTINGS', 
-                  payload: { commissionRate: Number(e.target.value) }
-                })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
                 max="100"
                 step="0.1"
+                value={platformSettings.commissionRate}
+                onChange={(e) => handleUpdateSettings('commissionRate', parseFloat(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Order Value (R)</label>
+              <label className="block font-medium text-gray-900 mb-2">Minimum Order Value (R)</label>
               <input
                 type="number"
-                value={state.platformSettings.minimumOrderValue}
-                onChange={(e) => dispatch({ 
-                  type: 'UPDATE_PLATFORM_SETTINGS', 
-                  payload: { minimumOrderValue: Number(e.target.value) }
-                })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
+                value={platformSettings.minimumOrderValue}
+                onChange={(e) => handleUpdateSettings('minimumOrderValue', parseInt(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Max Products per Wholesaler</label>
+              <label className="block font-medium text-gray-900 mb-2">Max Products per Wholesaler</label>
               <input
                 type="number"
-                value={state.platformSettings.maxProductsPerWholesaler}
-                onChange={(e) => dispatch({ 
-                  type: 'UPDATE_PLATFORM_SETTINGS', 
-                  payload: { maxProductsPerWholesaler: Number(e.target.value) }
-                })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="1"
+                value={platformSettings.maxProductsPerWholesaler}
+                onChange={(e) => handleUpdateSettings('maxProductsPerWholesaler', parseInt(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Support Response Time (hours)</label>
+              <label className="block font-medium text-gray-900 mb-2">Support Response Time (hours)</label>
               <input
                 type="number"
-                value={state.platformSettings.supportResponseTime}
-                onChange={(e) => dispatch({ 
-                  type: 'UPDATE_PLATFORM_SETTINGS', 
-                  payload: { supportResponseTime: Number(e.target.value) }
-                })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="1"
+                value={platformSettings.supportResponseTime}
+                onChange={(e) => handleUpdateSettings('supportResponseTime', parseInt(e.target.value))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            Security Settings
-          </h3>
+      {/* Security Settings */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <Shield className="w-6 h-6" />
+          Security Settings
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Two-Factor Authentication</p>
-                <p className="text-sm text-gray-500">Require 2FA for all users</p>
+                <label className="font-medium text-gray-900">Two-Factor Authentication</label>
+                <p className="text-sm text-gray-500">Require 2FA for all admin accounts</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.twoFactorRequired}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { twoFactorRequired: e.target.checked }
-                  })}
+                  checked={platformSettings.twoFactorRequired}
+                  onChange={(e) => handleUpdateSettings('twoFactorRequired', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1928,17 +1668,14 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Data Encryption</p>
+                <label className="font-medium text-gray-900">Data Encryption</label>
                 <p className="text-sm text-gray-500">Encrypt sensitive data at rest</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.dataEncryptionEnabled}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { dataEncryptionEnabled: e.target.checked }
-                  })}
+                  checked={platformSettings.dataEncryptionEnabled}
+                  onChange={(e) => handleUpdateSettings('dataEncryptionEnabled', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1947,17 +1684,14 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-gray-900">Audit Logging</p>
-                <p className="text-sm text-gray-500">Log all admin actions</p>
+                <label className="font-medium text-gray-900">Audit Logging</label>
+                <p className="text-sm text-gray-500">Log all admin actions for compliance</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={state.platformSettings.auditLoggingEnabled}
-                  onChange={(e) => dispatch({ 
-                    type: 'UPDATE_PLATFORM_SETTINGS', 
-                    payload: { auditLoggingEnabled: e.target.checked }
-                  })}
+                  checked={platformSettings.auditLoggingEnabled}
+                  onChange={(e) => handleUpdateSettings('auditLoggingEnabled', e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -1965,56 +1699,83 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            System Status
-          </h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Server className="w-4 h-4 text-green-500" />
-                <span className="text-gray-700">Server Uptime</span>
+      {/* System Status */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <Activity className="w-6 h-6" />
+          System Status
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-green-50 p-4 rounded-xl">
+            <div className="flex items-center gap-3">
+              <Server className="w-8 h-8 text-green-600" />
+              <div>
+                <p className="font-semibold text-green-900">Server Uptime</p>
+                <p className="text-2xl font-bold text-green-600">{state.systemStats.serverUptime}%</p>
               </div>
-              <span className="font-medium text-green-600">{state.systemStats.serverUptime}%</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-blue-500" />
-                <span className="text-gray-700">Response Time</span>
-              </div>
-              <span className="font-medium text-blue-600">{state.systemStats.responseTime}ms</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-purple-500" />
-                <span className="text-gray-700">Active Sessions</span>
-              </div>
-              <span className="font-medium text-purple-600">{state.systemStats.activeSessions}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-orange-500" />
-                <span className="text-gray-700">Daily Active Users</span>
-              </div>
-              <span className="font-medium text-orange-600">{state.systemStats.dailyActiveUsers}</span>
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <button
-              onClick={() => dispatch({ type: 'RESET_SETTINGS_TO_DEFAULT' })}
-              className="w-full bg-gray-50 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset to Default Settings
-            </button>
+          <div className="bg-blue-50 p-4 rounded-xl">
+            <div className="flex items-center gap-3">
+              <Zap className="w-8 h-8 text-blue-600" />
+              <div>
+                <p className="font-semibold text-blue-900">Response Time</p>
+                <p className="text-2xl font-bold text-blue-600">{state.systemStats.responseTime}ms</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 p-4 rounded-xl">
+            <div className="flex items-center gap-3">
+              <Users className="w-8 h-8 text-purple-600" />
+              <div>
+                <p className="font-semibold text-purple-900">Active Sessions</p>
+                <p className="text-2xl font-bold text-purple-600">{state.systemStats.activeSessions.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 p-4 rounded-xl">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-8 h-8 text-orange-600" />
+              <div>
+                <p className="font-semibold text-orange-900">Daily Transactions</p>
+                <p className="text-2xl font-bold text-orange-600">{state.systemStats.dailyTransactions}</p>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+
+      {settingsChanged && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <p className="text-yellow-800 font-medium">You have unsaved changes. Don't forget to save your settings!</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Settings Modal
+  const SettingsModal = () => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-sm sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">Platform Settings</h3>
+          <button
+            onClick={() => setShowSettings(false)}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        </div>
+        
+        {renderSettings()}
       </div>
     </div>
   );
