@@ -15,7 +15,7 @@ export function LoginForm() {
     // Check for admin login
     if (email === 'admin@test.com') {
       const adminUser = state.users.find(u => u.email === email && u.role === 'admin');
-      if (adminUser) {
+      if (adminUser && password) { // Admin can use any password as long as one is provided
         dispatch({ type: 'SET_USER', payload: adminUser });
         return;
       }
