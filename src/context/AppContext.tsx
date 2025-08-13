@@ -82,7 +82,7 @@ const initialState: AppState = {
     {
       id: '00000000-0000-0000-0000-000000000001',
       name: 'Admin User',
-      email: 'Aadamabdurahman1974@gmail.com',
+      email: 'admin@test.com',
       role: 'admin',
       businessName: 'NWI B2B Platform',
       phone: '+27 123 456 789',

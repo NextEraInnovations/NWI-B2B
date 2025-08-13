@@ -13,7 +13,7 @@ export function LoginForm() {
     e.preventDefault();
     
     // Check for admin login
-    if (email === 'Aadamabdurahman1974@gmail.com' && password === 'Aa0605023') {
+    if (email === 'admin@test.com') {
       const adminUser = state.users.find(u => u.email === email && u.role === 'admin');
       if (adminUser) {
         dispatch({ type: 'SET_USER', payload: adminUser });
