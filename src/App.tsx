@@ -39,7 +39,7 @@ function AppContent() {
         onMobileMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isMobileSidebarOpen={isMobileSidebarOpen}
       />
-      <div className="flex min-h-0">
+      <div className="flex min-h-0 h-[calc(100vh-theme(spacing.16))] sm:h-[calc(100vh-theme(spacing.20))] lg:h-[calc(100vh-theme(spacing.24))]">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block">
           <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -53,7 +53,7 @@ function AppContent() {
           onClose={() => setIsMobileSidebarOpen(false)}
         />
         
-        <main className="flex-1 p-3 sm:p-4 lg:p-8 min-w-0 overflow-x-hidden">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 xl:p-8 2xl:p-10 min-w-0 overflow-x-hidden overflow-y-auto">
           {renderDashboard()}
         </main>
       </div>

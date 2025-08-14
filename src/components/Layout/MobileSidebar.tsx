@@ -89,39 +89,39 @@ export function MobileSidebar({ activeTab, setActiveTab, isOpen, onClose }: Mobi
       />
       
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full w-72 sm:w-80 bg-white/95 backdrop-blur-sm shadow-2xl z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
+      <aside className={`fixed top-0 left-0 h-full w-80 sm:w-96 bg-white/95 backdrop-blur-sm shadow-2xl z-50 transform transition-transform duration-300 ease-in-out lg:hidden ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       } overflow-y-auto`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200/50 flex-shrink-0">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200/50 flex-shrink-0 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <span className="text-white font-bold">N</span>
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <span className="text-white font-bold text-lg">N</span>
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">NWI B2B</h2>
-              <p className="text-xs text-gray-500 truncate">Menu</p>
+              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent truncate">NWI B2B</h2>
+              <p className="text-sm text-gray-500 truncate font-medium">Navigation Menu</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 flex-shrink-0"
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-white/50 rounded-xl transition-all duration-200 flex-shrink-0 active:scale-95"
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* User Info */}
-        <div className="p-4 sm:p-6 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
+        <div className="p-6 border-b border-gray-200/50 bg-gradient-to-r from-gray-50 to-blue-50 flex-shrink-0">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="bg-gradient-to-r from-gray-100 to-gray-200 w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-              <span className="text-gray-600 font-bold text-sm sm:text-lg">
+            <div className="bg-gradient-to-r from-gray-100 to-gray-200 w-14 h-14 rounded-2xl flex items-center justify-center shadow-md flex-shrink-0">
+              <span className="text-gray-600 font-bold text-xl">
                 {state.currentUser?.name.charAt(0)}
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-gray-900 text-sm sm:text-base truncate">{state.currentUser?.name}</p>
-              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+              <p className="font-semibold text-gray-900 text-base truncate">{state.currentUser?.name}</p>
+              <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-semibold ${
                 state.currentUser?.role === 'wholesaler' ? 'bg-green-100 text-green-800' :
                 state.currentUser?.role === 'retailer' ? 'bg-orange-100 text-orange-800' :
                 state.currentUser?.role === 'admin' ? 'bg-purple-100 text-purple-800' :
@@ -135,20 +135,20 @@ export function MobileSidebar({ activeTab, setActiveTab, isOpen, onClose }: Mobi
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 sm:p-6 space-y-2 flex-1 overflow-y-auto">
+        <nav className="p-6 space-y-3 flex-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
               <button
                 key={item.id}
                 onClick={() => handleItemClick(item.id)}
-                className={`w-full flex items-center space-x-3 sm:space-x-4 px-3 sm:px-4 py-3 sm:py-4 rounded-lg sm:rounded-xl text-left transition-all duration-200 font-medium text-sm sm:text-base ${
+                className={`w-full flex items-center space-x-4 px-5 py-4 rounded-xl text-left transition-all duration-200 font-medium text-base ${
                   activeTab === item.id
-                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-md'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-lg font-semibold'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-md active:bg-gray-100'
                 }`}
               >
-                <Icon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+                <Icon className="w-6 h-6 flex-shrink-0" />
                 <span className="font-semibold truncate">{item.label}</span>
               </button>
             );

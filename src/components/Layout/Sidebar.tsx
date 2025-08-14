@@ -71,22 +71,22 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const menuItems = getMenuItems();
 
   return (
-    <aside className="bg-white/95 backdrop-blur-sm border-r border-gray-200/50 w-64 xl:w-72 flex-shrink-0 shadow-sm">
-      <nav className="p-4 xl:p-6 space-y-2 xl:space-y-3">
+    <aside className="bg-white/95 backdrop-blur-sm border-r border-gray-200/50 w-64 xl:w-80 2xl:w-96 flex-shrink-0 shadow-sm h-full">
+      <nav className="p-4 xl:p-6 2xl:p-8 space-y-2 xl:space-y-3 2xl:space-y-4 h-full overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           return (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 xl:space-x-4 px-3 xl:px-5 py-3 xl:py-4 rounded-xl text-left transition-all duration-200 font-medium text-sm xl:text-base ${
+              className={`w-full flex items-center space-x-3 xl:space-x-4 2xl:space-x-6 px-4 xl:px-6 2xl:px-8 py-3 xl:py-4 2xl:py-5 rounded-xl xl:rounded-2xl text-left transition-all duration-200 font-medium text-sm xl:text-base 2xl:text-lg ${
                 activeTab === item.id
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-md transform scale-105'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm hover:transform hover:scale-102'
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border border-blue-200 shadow-lg transform scale-105 font-semibold'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 hover:shadow-md hover:transform hover:scale-102 active:scale-100'
               }`}
             >
-              <Icon className="w-5 h-5 xl:w-6 xl:h-6 flex-shrink-0" />
-              <span className="font-semibold">{item.label}</span>
+              <Icon className="w-5 h-5 xl:w-6 xl:h-6 2xl:w-7 2xl:h-7 flex-shrink-0" />
+              <span className="font-semibold truncate">{item.label}</span>
             </button>
           );
         })}

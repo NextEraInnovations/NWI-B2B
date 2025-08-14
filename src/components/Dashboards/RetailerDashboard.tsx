@@ -186,84 +186,87 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
 
   const renderOverview = () => (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Retailer Dashboard</h2>
-        <div className="text-sm text-gray-500">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 lg:gap-6">
+        <div>
+          <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">Retailer Dashboard</h2>
+          <p className="text-base lg:text-lg text-gray-600 mt-2">Manage your orders and browse products</p>
+        </div>
+        <div className="text-sm lg:text-base text-gray-500 bg-gray-50 px-4 py-2 rounded-xl">
           Welcome back, {currentUser.name}
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 xl:gap-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl p-6 xl:p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Orders</p>
-              <p className="text-3xl font-bold text-gray-900">{myOrders.length}</p>
+              <p className="text-sm lg:text-base font-medium text-gray-600">Total Orders</p>
+              <p className="text-3xl xl:text-4xl font-bold text-gray-900 mt-2">{myOrders.length}</p>
             </div>
-            <div className="bg-blue-100 p-3 rounded-xl">
-              <ShoppingCart className="w-6 h-6 text-blue-600" />
+            <div className="bg-blue-100 p-3 xl:p-4 rounded-xl xl:rounded-2xl">
+              <ShoppingCart className="w-6 h-6 xl:w-8 xl:h-8 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl p-6 xl:p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Spent</p>
-              <p className="text-3xl font-bold text-gray-900">R{myOrders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</p>
+              <p className="text-sm lg:text-base font-medium text-gray-600">Total Spent</p>
+              <p className="text-3xl xl:text-4xl font-bold text-gray-900 mt-2">R{myOrders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}</p>
             </div>
-            <div className="bg-green-100 p-3 rounded-xl">
-              <DollarSign className="w-6 h-6 text-green-600" />
+            <div className="bg-green-100 p-3 xl:p-4 rounded-xl xl:rounded-2xl">
+              <DollarSign className="w-6 h-6 xl:w-8 xl:h-8 text-green-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl p-6 xl:p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Cart Items</p>
-              <p className="text-3xl font-bold text-gray-900">{getCartItemCount()}</p>
+              <p className="text-sm lg:text-base font-medium text-gray-600">Cart Items</p>
+              <p className="text-3xl xl:text-4xl font-bold text-gray-900 mt-2">{getCartItemCount()}</p>
             </div>
-            <div className="bg-purple-100 p-3 rounded-xl">
-              <Package className="w-6 h-6 text-purple-600" />
+            <div className="bg-purple-100 p-3 xl:p-4 rounded-xl xl:rounded-2xl">
+              <Package className="w-6 h-6 xl:w-8 xl:h-8 text-purple-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl p-6 xl:p-8 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Support Tickets</p>
-              <p className="text-3xl font-bold text-gray-900">{myTickets.length}</p>
+              <p className="text-sm lg:text-base font-medium text-gray-600">Support Tickets</p>
+              <p className="text-3xl xl:text-4xl font-bold text-gray-900 mt-2">{myTickets.length}</p>
             </div>
-            <div className="bg-orange-100 p-3 rounded-xl">
-              <MessageSquare className="w-6 h-6 text-orange-600" />
+            <div className="bg-orange-100 p-3 xl:p-4 rounded-xl xl:rounded-2xl">
+              <MessageSquare className="w-6 h-6 xl:w-8 xl:h-8 text-orange-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20">
-        <div className="p-6 border-b border-gray-200/50">
-          <h3 className="text-xl font-bold text-gray-900">Recent Orders</h3>
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl shadow-lg border border-white/20">
+        <div className="p-6 xl:p-8 border-b border-gray-200/50">
+          <h3 className="text-xl xl:text-2xl font-bold text-gray-900">Recent Orders</h3>
         </div>
-        <div className="p-6">
+        <div className="p-6 xl:p-8">
           {myOrders.slice(0, 5).map((order) => (
-            <div key={order.id} className="flex items-center justify-between py-4 border-b border-gray-100 last:border-b-0">
-              <div className="flex items-center space-x-4">
-                <div className="bg-gray-100 p-2 rounded-lg">
-                  <ShoppingCart className="w-5 h-5 text-gray-600" />
+            <div key={order.id} className="flex items-center justify-between py-4 xl:py-6 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 rounded-xl transition-colors">
+              <div className="flex items-center space-x-4 xl:space-x-6">
+                <div className="bg-gray-100 p-3 xl:p-4 rounded-xl xl:rounded-2xl">
+                  <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6 text-gray-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">Order #{order.id}</p>
-                  <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                  <p className="font-semibold text-gray-900 text-base xl:text-lg">Order #{order.id}</p>
+                  <p className="text-sm xl:text-base text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-semibold text-gray-900">R{order.total.toLocaleString()}</p>
-                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                <p className="font-semibold text-gray-900 text-base xl:text-lg">R{order.total.toLocaleString()}</p>
+                <span className={`inline-flex items-center gap-1 px-3 py-1 xl:py-1.5 rounded-full text-xs xl:text-sm font-medium ${getStatusColor(order.status)}`}>
                   {getStatusIcon(order.status)}
                   {order.status}
                 </span>
@@ -277,18 +280,21 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
 
   const renderBrowse = () => (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">Browse Products</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 lg:gap-6">
+        <div>
+          <h2 className="text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900">Browse Products</h2>
+          <p className="text-base lg:text-lg text-gray-600 mt-2">Discover and order from our wholesale partners</p>
+        </div>
         {getCartItemCount() > 0 && (
           <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm lg:text-base text-gray-600 bg-blue-50 px-4 py-2 rounded-xl">
               Cart: {getCartItemCount()} items (R{getCartTotal().toLocaleString()})
             </div>
             <button
               onClick={handleCheckout}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 xl:px-8 py-3 xl:py-4 rounded-xl xl:rounded-2xl hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-5 h-5 xl:w-6 xl:h-6" />
               Checkout
             </button>
           </div>
@@ -296,30 +302,30 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl xl:rounded-3xl shadow-lg border border-white/20 p-6 xl:p-8">
         <div className="space-y-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 xl:w-6 xl:h-6" />
             <input
               type="text"
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-12 xl:pl-14 pr-4 xl:pr-6 py-3 xl:py-4 border border-gray-200 rounded-xl xl:rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base xl:text-lg"
             />
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-600">Categories:</span>
+            <div className="flex items-center gap-3 mb-4">
+              <Filter className="w-5 h-5 xl:w-6 xl:h-6 text-gray-400" />
+              <span className="text-sm xl:text-base font-medium text-gray-600">Categories:</span>
             </div>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
+            <div className="flex flex-wrap gap-3 xl:gap-4">
               <button
                 onClick={() => setSelectedCategory('')}
-                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 ${
+                className={`px-4 xl:px-6 py-2.5 xl:py-3 rounded-xl xl:rounded-2xl font-medium text-sm xl:text-base transition-all duration-200 ${
                   selectedCategory === '' 
-                    ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg transform scale-105' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
+                    ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg transform scale-105 font-semibold' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md active:scale-95'
                 }`}
               >
                 All Categories
@@ -341,10 +347,10 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                   <button
                     key={category}
                     onClick={() => setSelectedCategory(category)}
-                    className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm transition-all duration-200 ${
+                    className={`px-4 xl:px-6 py-2.5 xl:py-3 rounded-xl xl:rounded-2xl font-medium text-sm xl:text-base transition-all duration-200 ${
                       selectedCategory === category 
-                        ? `bg-gradient-to-r ${colorClass} text-white shadow-lg transform scale-105` 
-                        : `bg-gradient-to-r ${colorClass} text-white opacity-70 hover:opacity-100 hover:shadow-md hover:transform hover:scale-102`
+                        ? `bg-gradient-to-r ${colorClass} text-white shadow-lg transform scale-105 font-semibold` 
+                        : `bg-gradient-to-r ${colorClass} text-white opacity-70 hover:opacity-100 hover:shadow-md hover:transform hover:scale-102 active:scale-100`
                     }`}
                   >
                     {category}
@@ -357,17 +363,17 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 xl:gap-8">
         {filteredProducts.map((product) => (
-          <div key={product.id} className={`backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 ${
+          <div key={product.id} className={`backdrop-blur-sm rounded-2xl xl:rounded-3xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 ${
             isProductOnPromotion(product.id) 
-              ? 'bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 border-orange-300 ring-2 ring-orange-200 shadow-orange-100' 
+              ? 'bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 border-orange-300 ring-2 ring-orange-200 shadow-orange-100 animate-pulse' 
               : 'bg-white/80 border-white/20'
           }`}>
             {/* Promotion Badge */}
             {isProductOnPromotion(product.id) && (
-              <div className="absolute top-2 left-2 sm:top-3 sm:left-3 z-10">
-                <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
+              <div className="absolute top-3 left-3 z-10">
+                <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 xl:px-4 py-1 xl:py-1.5 rounded-full text-xs xl:text-sm font-bold shadow-lg animate-bounce">
                   🔥 {getProductDiscount(product.id)}% OFF
                 </div>
               </div>
@@ -375,68 +381,68 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
             <img 
               src={product.imageUrl} 
               alt={product.name}
-              className={`w-full h-32 sm:h-48 object-cover ${
+              className={`w-full h-48 xl:h-56 2xl:h-64 object-cover ${
                 isProductOnPromotion(product.id) ? 'ring-2 ring-orange-200' : ''
               }`}
             />
-            <div className="p-3 sm:p-6">
+            <div className="p-4 xl:p-6">
               <div className="flex items-start justify-between mb-3">
-                <h3 className={`font-bold text-base sm:text-lg line-clamp-2 ${
+                <h3 className={`font-bold text-base xl:text-lg line-clamp-2 ${
                   isProductOnPromotion(product.id) ? 'text-orange-900' : 'text-gray-900'
                 }`}>{product.name}</h3>
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ml-2">
+                <span className="bg-blue-100 text-blue-800 text-xs xl:text-sm font-medium px-2 xl:px-3 py-1 rounded-full flex-shrink-0 ml-2">
                   {product.category}
                 </span>
               </div>
-              <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">{product.description}</p>
+              <p className="text-gray-600 text-sm xl:text-base mb-4 line-clamp-2">{product.description}</p>
               
-              <div className="space-y-2 mb-4">
+              <div className="space-y-3 mb-4">
                 <div className="flex justify-between">
-                  <span className="text-xs sm:text-sm text-gray-500">Price:</span>
+                  <span className="text-sm xl:text-base text-gray-500">Price:</span>
                   <div className="text-right">
                     {isProductOnPromotion(product.id) ? (
                       <div className="flex flex-col items-end">
-                        <span className="text-xs text-gray-400 line-through">R{product.price}</span>
-                        <span className="font-bold text-red-600 text-sm sm:text-base">R{getDiscountedPrice(product).toFixed(0)}</span>
+                        <span className="text-sm text-gray-400 line-through">R{product.price}</span>
+                        <span className="font-bold text-red-600 text-base xl:text-lg">R{getDiscountedPrice(product).toFixed(0)}</span>
                       </div>
                     ) : (
-                      <span className="font-bold text-green-600 text-sm sm:text-base">R{product.price}</span>
+                      <span className="font-bold text-green-600 text-base xl:text-lg">R{product.price}</span>
                     )}
                   </div>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs sm:text-sm text-gray-500">Stock:</span>
-                  <span className="font-medium text-gray-900 text-sm sm:text-base">{product.stock}</span>
+                  <span className="text-sm xl:text-base text-gray-500">Stock:</span>
+                  <span className="font-medium text-gray-900 text-base xl:text-lg">{product.stock}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-xs sm:text-sm text-gray-500">Min Order:</span>
-                  <span className="font-medium text-gray-900 text-sm sm:text-base">{product.minOrderQuantity}</span>
+                  <span className="text-sm xl:text-base text-gray-500">Min Order:</span>
+                  <span className="font-medium text-gray-900 text-base xl:text-lg">{product.minOrderQuantity}</span>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={() => removeFromCart(product.id)}
                     disabled={!cart[product.id]}
-                    className="w-7 h-7 sm:w-8 sm:h-8 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    className="w-10 h-10 xl:w-12 xl:h-12 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95"
                   >
-                    <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Minus className="w-4 h-4 xl:w-5 xl:h-5" />
                   </button>
-                  <span className="w-10 sm:w-12 text-center font-medium text-sm sm:text-base">
+                  <span className="w-12 xl:w-16 text-center font-bold text-base xl:text-lg">
                     {cart[product.id] || 0}
                   </span>
                   <button
                     onClick={() => addToCart(product.id)}
                     disabled={product.stock === 0 || (cart[product.id] || 0) >= product.stock}
-                    className="w-7 h-7 sm:w-8 sm:h-8 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    className="w-10 h-10 xl:w-12 xl:h-12 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95"
                   >
-                    <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Plus className="w-4 h-4 xl:w-5 xl:h-5" />
                   </button>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs sm:text-sm text-gray-500">Total:</p>
-                  <p className="font-bold text-gray-900 text-sm sm:text-base">
+                  <p className="text-sm xl:text-base text-gray-500">Total:</p>
+                  <p className="font-bold text-gray-900 text-base xl:text-lg">
                     R{((cart[product.id] || 0) * getDiscountedPrice(product)).toFixed(0)}
                   </p>
                 </div>
