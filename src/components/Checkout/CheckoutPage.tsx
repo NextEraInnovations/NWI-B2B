@@ -153,6 +153,9 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const handlePayFastSuccess = (paymentData: any) => {
     console.log('PayFast payment successful:', paymentData);
     
+    // Update the order total based on the actual payment amount
+    const actualTotal = paymentData.amount || finalTotal;
+    
     // Create orders for each wholesaler
     orderGroups.forEach((orderGroup, index) => {
       const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
@@ -168,7 +171,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
         retailerId: currentUser.id,
         wholesalerId: orderGroup.wholesaler.id,
         items: orderItems,
-        total: orderItems.reduce((sum, item) => sum + item.total, 0),
+        total: actualTotal,
         status: 'pending',
         paymentStatus: 'paid',
         paymentMethod: 'payfast',
@@ -224,7 +227,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
               amount: finalTotal,
               customerEmail: currentUser.email,
               customerName: currentUser.name,
-              description: `NWI B2B Order - ${cartItems.length} items`
+              description: `${cartItems.map(item => item.product.name).join(', ')}`
             }}
             onSuccess={handlePayFastSuccess}
             onError={handlePayFastError}
