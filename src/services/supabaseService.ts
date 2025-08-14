@@ -5,9 +5,9 @@ import { v4 as uuidv4 } from 'uuid';
 export class SupabaseService {
   // Handle errors gracefully
   private static handleError(error: any, operation: string) {
-    console.error(`Supabase ${operation} error:`, error);
+    console.error(`❌ Supabase ${operation} error:`, error);
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. Data changes will only persist in memory.');
+      console.warn('⚠️ Supabase not configured. Using demo mode.');
       return;
     }
     throw error;
@@ -15,7 +15,7 @@ export class SupabaseService {
 
   // Real-time notification helper
   private static notifyRealTimeUpdate(operation: string, data: any) {
-    console.log(`🔄 Real-time ${operation}:`, data);
+    console.log(`🔄 Live database ${operation}:`, data?.id || 'unknown');
     // Emit custom event for real-time updates
     window.dispatchEvent(new CustomEvent('supabase-update', {
       detail: { operation, data }
@@ -25,10 +25,11 @@ export class SupabaseService {
   // User operations
   static async createUser(user: Omit<User, 'id' | 'createdAt'>) {
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. User creation skipped.');
+      console.warn('⚠️ Supabase not configured. User creation skipped.');
       return { ...user, id: uuidv4(), createdAt: new Date().toISOString() } as User;
     }
 
+    console.log('💾 Creating user in database:', user.name);
     const { data, error } = await supabase
       .from('users')
       .insert([{
@@ -46,10 +47,13 @@ export class SupabaseService {
       .single();
 
     if (error) this.handleError(error, 'createUser');
+    console.log('✅ User created successfully in database');
+    this.notifyRealTimeUpdate('user-created', data);
     return this.transformUser(data);
   }
 
   static async updateUser(id: string, updates: Partial<User>) {
+    console.log('💾 Updating user in database:', id);
     const { data, error } = await supabase
       .from('users')
       .update({
@@ -67,27 +71,31 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    console.log('✅ User updated successfully in database');
+    this.notifyRealTimeUpdate('user-updated', data);
     return this.transformUser(data);
   }
 
   static async getUsers() {
+    console.log('📖 Fetching users from database');
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    console.log('✅ Users fetched successfully:', data?.length || 0);
     return data?.map(this.transformUser) || [];
   }
 
   // Product operations
   static async createProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) {
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. Product creation skipped.');
+      console.warn('⚠️ Supabase not configured. Product creation skipped.');
       return { ...product, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Product;
     }
 
-    console.log('Creating product in Supabase:', product);
+    console.log('💾 Creating product in database:', product.name);
 
     const { data, error } = await supabase
       .from('products')
@@ -107,23 +115,23 @@ export class SupabaseService {
       .single();
 
     if (error) {
-      console.error('Error creating product:', error);
+      console.error('❌ Error creating product:', error);
       this.handleError(error, 'createProduct');
       throw error;
     }
     
-    console.log('Product created successfully:', data);
+    console.log('✅ Product created successfully in database');
     this.notifyRealTimeUpdate('product-created', data);
     return this.transformProduct(data);
   }
 
   static async updateProduct(id: string, updates: Partial<Product>) {
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. Product update skipped.');
+      console.warn('⚠️ Supabase not configured. Product update skipped.');
       return { ...updates, id, updatedAt: new Date().toISOString() } as Product;
     }
 
-    console.log('Updating product in Supabase:', id, updates);
+    console.log('💾 Updating product in database:', updates.name || id);
 
     const { data, error } = await supabase
       .from('products')
@@ -142,23 +150,23 @@ export class SupabaseService {
       .single();
 
     if (error) {
-      console.error('Error updating product:', error);
+      console.error('❌ Error updating product:', error);
       this.handleError(error, 'updateProduct');
       throw error;
     }
     
-    console.log('Product updated successfully:', data);
+    console.log('✅ Product updated successfully in database');
     this.notifyRealTimeUpdate('product-updated', data);
     return this.transformProduct(data);
   }
 
   static async deleteProduct(id: string) {
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. Product deletion skipped.');
+      console.warn('⚠️ Supabase not configured. Product deletion skipped.');
       return;
     }
 
-    console.log('Deleting product from Supabase:', id);
+    console.log('💾 Deleting product from database:', id);
 
     const { error } = await supabase
       .from('products')
@@ -166,27 +174,30 @@ export class SupabaseService {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting product:', error);
+      console.error('❌ Error deleting product:', error);
       this.handleError(error, 'deleteProduct');
       throw error;
     }
     
-    console.log('Product deleted successfully');
+    console.log('✅ Product deleted successfully from database');
     this.notifyRealTimeUpdate('product-deleted', { id });
   }
 
   static async getProducts() {
+    console.log('📖 Fetching products from database');
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    console.log('✅ Products fetched successfully:', data?.length || 0);
     return data?.map(this.transformProduct) || [];
   }
 
   // Order operations
   static async createOrder(order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) {
+    console.log('💾 Creating order in database');
     const orderId = uuidv4();
     const { data: orderData, error: orderError } = await supabase
       .from('orders')
@@ -221,10 +232,13 @@ export class SupabaseService {
 
     if (itemsError) throw itemsError;
 
+    console.log('✅ Order created successfully in database');
+    this.notifyRealTimeUpdate('order-created', orderData);
     return this.transformOrder(orderData, order.items);
   }
 
   static async updateOrder(id: string, updates: Partial<Order>) {
+    console.log('💾 Updating order in database:', id);
     const { data, error } = await supabase
       .from('orders')
       .update({
@@ -255,10 +269,13 @@ export class SupabaseService {
       total: parseFloat(item.total)
     })) || [];
 
+    console.log('✅ Order updated successfully in database');
+    this.notifyRealTimeUpdate('order-updated', data);
     return this.transformOrder(data, items);
   }
 
   static async getOrders() {
+    console.log('📖 Fetching orders from database');
     const { data: ordersData, error: ordersError } = await supabase
       .from('orders')
       .select('*')
@@ -283,10 +300,14 @@ export class SupabaseService {
       }));
       return this.transformOrder(order, items);
     }) || [];
+    
+    console.log('✅ Orders fetched successfully:', ordersData?.length || 0);
+    return orders;
   }
 
   // Support ticket operations
   static async createSupportTicket(ticket: Omit<SupportTicket, 'id' | 'createdAt' | 'updatedAt'>) {
+    console.log('💾 Creating support ticket in database:', ticket.subject);
     const { data, error } = await supabase
       .from('support_tickets')
       .insert([{
@@ -303,10 +324,13 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    console.log('✅ Support ticket created successfully in database');
+    this.notifyRealTimeUpdate('ticket-created', data);
     return this.transformTicket(data);
   }
 
   static async updateSupportTicket(id: string, updates: Partial<SupportTicket>) {
+    console.log('💾 Updating support ticket in database:', id);
     const { data, error } = await supabase
       .from('support_tickets')
       .update({
@@ -322,21 +346,26 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    console.log('✅ Support ticket updated successfully in database');
+    this.notifyRealTimeUpdate('ticket-updated', data);
     return this.transformTicket(data);
   }
 
   static async getSupportTickets() {
+    console.log('📖 Fetching support tickets from database');
     const { data, error } = await supabase
       .from('support_tickets')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    console.log('✅ Support tickets fetched successfully:', data?.length || 0);
     return data?.map(this.transformTicket) || [];
   }
 
   // Promotion operations
   static async createPromotion(promotion: Omit<Promotion, 'id' | 'submittedAt'>) {
+    console.log('💾 Creating promotion in database:', promotion.title);
     const { data, error } = await supabase
       .from('promotions')
       .insert({
@@ -354,10 +383,13 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    console.log('✅ Promotion created successfully in database');
+    this.notifyRealTimeUpdate('promotion-created', data);
     return this.transformPromotion(data);
   }
 
   static async updatePromotion(id: string, updates: Partial<Promotion>) {
+    console.log('💾 Updating promotion in database:', id);
     const { data, error } = await supabase
       .from('promotions')
       .update({
@@ -378,21 +410,26 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    console.log('✅ Promotion updated successfully in database');
+    this.notifyRealTimeUpdate('promotion-updated', data);
     return this.transformPromotion(data);
   }
 
   static async getPromotions() {
+    console.log('📖 Fetching promotions from database');
     const { data, error } = await supabase
       .from('promotions')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+    console.log('✅ Promotions fetched successfully:', data?.length || 0);
     return data?.map(this.transformPromotion) || [];
   }
 
   // Return request operations
   static async createReturnRequest(returnRequest: Omit<ReturnRequest, 'id' | 'createdAt' | 'updatedAt'>) {
+    console.log('💾 Creating return request in database');
     const { data: returnData, error: returnError } = await supabase
       .from('return_requests')
       .insert({
@@ -429,10 +466,13 @@ export class SupabaseService {
 
     if (itemsError) throw itemsError;
 
+    console.log('✅ Return request created successfully in database');
+    this.notifyRealTimeUpdate('return-created', returnData);
     return this.transformReturnRequest(returnData, returnRequest.items);
   }
 
   static async updateReturnRequest(id: string, updates: Partial<ReturnRequest>) {
+    console.log('💾 Updating return request in database:', id);
     const { data, error } = await supabase
       .from('return_requests')
       .update({
@@ -468,10 +508,13 @@ export class SupabaseService {
       totalRefund: parseFloat(item.total_refund)
     })) || [];
 
+    console.log('✅ Return request updated successfully in database');
+    this.notifyRealTimeUpdate('return-updated', data);
     return this.transformReturnRequest(data, items);
   }
 
   static async getReturnRequests() {
+    console.log('📖 Fetching return requests from database');
     const { data: returnsData, error: returnsError } = await supabase
       .from('return_requests')
       .select('*')
@@ -498,10 +541,14 @@ export class SupabaseService {
       }));
       return this.transformReturnRequest(returnReq, items);
     }) || [];
+    
+    console.log('✅ Return requests fetched successfully:', returnsData?.length || 0);
+    return returns;
   }
 
   // Pending user operations
   static async createPendingUser(pendingUser: Omit<PendingUser, 'id' | 'submittedAt'>) {
+    console.log('💾 Creating pending user in database:', pendingUser.name);
     const { data, error } = await supabase
       .from('pending_users')
       .insert([{
@@ -519,10 +566,13 @@ export class SupabaseService {
       .single();
 
     if (error) throw error;
+    console.log('✅ Pending user created successfully in database');
+    this.notifyRealTimeUpdate('pending-user-created', data);
     return this.transformPendingUser(data);
   }
 
   static async approvePendingUser(pendingUserId: string, adminId: string) {
+    console.log('💾 Approving pending user in database:', pendingUserId);
     // Get pending user data
     const { data: pendingUser, error: fetchError } = await supabase
       .from('pending_users')
@@ -562,10 +612,13 @@ export class SupabaseService {
 
     if (updateError) throw updateError;
 
+    console.log('✅ Pending user approved successfully in database');
+    this.notifyRealTimeUpdate('user-approved', newUser);
     return this.transformUser(newUser);
   }
 
   static async rejectPendingUser(pendingUserId: string, adminId: string, reason: string) {
+    console.log('💾 Rejecting pending user in database:', pendingUserId);
     const { error } = await supabase
       .from('pending_users')
       .update({
@@ -577,9 +630,12 @@ export class SupabaseService {
       .eq('id', pendingUserId);
 
     if (error) throw error;
+    console.log('✅ Pending user rejected successfully in database');
+    this.notifyRealTimeUpdate('user-rejected', { id: pendingUserId });
   }
 
   static async getPendingUsers() {
+    console.log('📖 Fetching pending users from database');
     const { data, error } = await supabase
       .from('pending_users')
       .select('*')
@@ -587,11 +643,13 @@ export class SupabaseService {
       .order('submitted_at', { ascending: false });
 
     if (error) throw error;
+    console.log('✅ Pending users fetched successfully:', data?.length || 0);
     return data?.map(this.transformPendingUser) || [];
   }
 
   // Platform settings operations
   static async getPlatformSettings() {
+    console.log('📖 Fetching platform settings from database');
     const { data, error } = await supabase
       .from('platform_settings')
       .select('*');
@@ -604,10 +662,12 @@ export class SupabaseService {
       settings[setting.key] = setting.value;
     });
     
+    console.log('✅ Platform settings fetched successfully:', Object.keys(settings).length);
     return settings;
   }
 
   static async updatePlatformSetting(key: string, value: any, updatedBy: string) {
+    console.log('💾 Updating platform setting in database:', key);
     const { error } = await supabase
       .from('platform_settings')
       .upsert({
@@ -617,6 +677,8 @@ export class SupabaseService {
       });
 
     if (error) throw error;
+    console.log('✅ Platform setting updated successfully in database');
+    this.notifyRealTimeUpdate('setting-updated', { key, value });
   }
 
   // Transform database rows to application types

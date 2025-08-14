@@ -140,7 +140,7 @@ export function useSupabaseData() {
 
   // Real-time event handlers
   const handleRealtimeUpdate = (tableName: string) => (payload: any) => {
-    console.log(`🔄 Real-time update for ${tableName}:`, payload);
+    console.log(`🔄 Live database update received for ${tableName}:`, payload.eventType, payload.new?.id || payload.old?.id);
     
     // Emit notification events for real-time updates
     if (payload.eventType === 'INSERT') {
@@ -149,93 +149,119 @@ export function useSupabaseData() {
           window.dispatchEvent(new CustomEvent('notification-event', {
             detail: { type: 'product-added', data: transformProduct(payload.new) }
           }));
+          console.log('📢 Product added notification sent');
           break;
         case 'orders':
           window.dispatchEvent(new CustomEvent('notification-event', {
             detail: { type: 'order-created', data: payload.new }
           }));
+          console.log('📢 Order created notification sent');
           break;
         case 'promotions':
           if (payload.new.status === 'approved') {
             window.dispatchEvent(new CustomEvent('notification-event', {
               detail: { type: 'promotion-approved', data: transformPromotion(payload.new) }
             }));
+            console.log('📢 Promotion approved notification sent');
           }
           break;
       }
     }
     
+    console.log(`💾 Processing live update for ${tableName} table`);
+    
     switch (tableName) {
       case 'users':
         if (payload.eventType === 'INSERT') {
           setUsers(prev => [...prev, transformUser(payload.new)]);
+          console.log('✅ User added to live state');
         } else if (payload.eventType === 'UPDATE') {
           setUsers(prev => prev.map(item => item.id === payload.new.id ? transformUser(payload.new) : item));
+          console.log('✅ User updated in live state');
         } else if (payload.eventType === 'DELETE') {
           setUsers(prev => prev.filter(item => item.id !== payload.old.id));
+          console.log('✅ User removed from live state');
         }
         break;
         
       case 'products':
         if (payload.eventType === 'INSERT') {
           setProducts(prev => [...prev, transformProduct(payload.new)]);
+          console.log('✅ Product added to live state');
         } else if (payload.eventType === 'UPDATE') {
           setProducts(prev => prev.map(item => item.id === payload.new.id ? transformProduct(payload.new) : item));
+          console.log('✅ Product updated in live state');
         } else if (payload.eventType === 'DELETE') {
           setProducts(prev => prev.filter(item => item.id !== payload.old.id));
+          console.log('✅ Product removed from live state');
         }
         break;
         
       case 'orders':
         // For orders, we need to refetch to get the items
+        console.log('🔄 Refetching orders for live update');
         fetchOrders();
         break;
         
       case 'order_items':
         // When order items change, refetch orders
+        console.log('🔄 Refetching orders due to order items change');
         fetchOrders();
         break;
         
       case 'support_tickets':
         if (payload.eventType === 'INSERT') {
           setTickets(prev => [...prev, transformTicket(payload.new)]);
+          console.log('✅ Support ticket added to live state');
         } else if (payload.eventType === 'UPDATE') {
           setTickets(prev => prev.map(item => item.id === payload.new.id ? transformTicket(payload.new) : item));
+          console.log('✅ Support ticket updated in live state');
         } else if (payload.eventType === 'DELETE') {
           setTickets(prev => prev.filter(item => item.id !== payload.old.id));
+          console.log('✅ Support ticket removed from live state');
         }
         break;
         
       case 'promotions':
         if (payload.eventType === 'INSERT') {
           setPromotions(prev => [...prev, transformPromotion(payload.new)]);
+          console.log('✅ Promotion added to live state');
         } else if (payload.eventType === 'UPDATE') {
           setPromotions(prev => prev.map(item => item.id === payload.new.id ? transformPromotion(payload.new) : item));
+          console.log('✅ Promotion updated in live state');
         } else if (payload.eventType === 'DELETE') {
           setPromotions(prev => prev.filter(item => item.id !== payload.old.id));
+          console.log('✅ Promotion removed from live state');
         }
         break;
         
       case 'return_requests':
         // For return requests, we need to refetch to get the items
+        console.log('🔄 Refetching return requests for live update');
         fetchReturnRequests();
         break;
         
       case 'return_items':
         // When return items change, refetch return requests
+        console.log('🔄 Refetching return requests due to return items change');
         fetchReturnRequests();
         break;
         
       case 'pending_users':
         if (payload.eventType === 'INSERT') {
           setPendingUsers(prev => [...prev, transformPendingUser(payload.new)]);
+          console.log('✅ Pending user added to live state');
         } else if (payload.eventType === 'UPDATE') {
           setPendingUsers(prev => prev.map(item => item.id === payload.new.id ? transformPendingUser(payload.new) : item));
+          console.log('✅ Pending user updated in live state');
         } else if (payload.eventType === 'DELETE') {
           setPendingUsers(prev => prev.filter(item => item.id !== payload.old.id));
+          console.log('✅ Pending user removed from live state');
         }
         break;
     }
+    
+    console.log(`✅ Live update processed successfully for ${tableName}`);
   };
 
   // Fetch individual data types

@@ -161,12 +161,12 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
             {state.isConnected ? (
               <div className="flex items-center gap-2 text-green-600">
                 <Wifi className="w-4 h-4" />
-                <span className="text-xs font-medium hidden sm:inline">Live</span>
+                <span className="text-xs font-medium hidden sm:inline">🔴 Live</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-red-600">
                 <WifiOff className="w-4 h-4" />
-                <span className="text-xs font-medium hidden sm:inline">Offline</span>
+                <span className="text-xs font-medium hidden sm:inline">⚫ Offline</span>
               </div>
             )}
           </div>

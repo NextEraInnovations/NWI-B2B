@@ -1063,7 +1063,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch(action);
     
     // Check if Supabase is configured
-    const isSupabaseConfigured = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+    const isSupabaseConfigured = !!(import.meta.env.VITE_SUPABASE_URL && 
+      import.meta.env.VITE_SUPABASE_ANON_KEY &&
+      import.meta.env.VITE_SUPABASE_URL !== 'https://demo.supabase.co' &&
+      import.meta.env.VITE_SUPABASE_ANON_KEY !== 'demo-key');
     
     if (!isSupabaseConfigured) {
       console.warn('Supabase not configured. Changes will only persist in memory.');
@@ -1071,51 +1074,82 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     try {
+      console.log('🔄 Processing live database update for action:', action.type);
+      
       switch (action.type) {
+        case 'ADD_USER':
+          console.log('💾 Saving new user to database:', action.payload.name);
+          await SupabaseService.createUser(action.payload);
+          console.log('✅ User saved to database successfully');
+          setTimeout(() => refetchUsers(), 100);
+          break;
+          
         case 'ADD_PRODUCT':
-          console.log('Saving product to database:', action.payload);
+          console.log('💾 Saving new product to database:', action.payload.name);
           await SupabaseService.createProduct(action.payload);
-          console.log('Product saved successfully to database');
+          console.log('✅ Product saved to database successfully');
           // Trigger real-time update
           setTimeout(() => refetchProducts(), 100);
           break;
+          
         case 'UPDATE_PRODUCT':
-          console.log('Updating product in database:', action.payload.id);
+          console.log('💾 Updating product in database:', action.payload.name);
           await SupabaseService.updateProduct(action.payload.id, action.payload);
-          console.log('Product updated successfully in database');
+          console.log('✅ Product updated in database successfully');
           setTimeout(() => refetchProducts(), 100);
           break;
+          
         case 'DELETE_PRODUCT':
-          console.log('Deleting product from database:', action.payload);
+          console.log('💾 Deleting product from database:', action.payload);
           await SupabaseService.deleteProduct(action.payload);
-          console.log('Product deleted successfully from database');
+          console.log('✅ Product deleted from database successfully');
           setTimeout(() => refetchProducts(), 100);
           break;
+          
         case 'ADD_ORDER':
+          console.log('💾 Saving new order to database:', action.payload.id);
           await SupabaseService.createOrder(action.payload);
+          console.log('✅ Order saved to database successfully');
           setTimeout(() => refetchOrders(), 100);
           break;
+          
         case 'UPDATE_ORDER':
+          console.log('💾 Updating order in database:', action.payload.id);
           await SupabaseService.updateOrder(action.payload.id, action.payload);
+          console.log('✅ Order updated in database successfully');
           setTimeout(() => refetchOrders(), 100);
           break;
+          
         case 'ADD_TICKET':
+          console.log('💾 Saving new support ticket to database:', action.payload.subject);
           await SupabaseService.createSupportTicket(action.payload);
+          console.log('✅ Support ticket saved to database successfully');
           setTimeout(() => refetchTickets(), 100);
           break;
+          
         case 'UPDATE_TICKET':
+          console.log('💾 Updating support ticket in database:', action.payload.id);
           await SupabaseService.updateSupportTicket(action.payload.id, action.payload);
+          console.log('✅ Support ticket updated in database successfully');
           setTimeout(() => refetchTickets(), 100);
           break;
+          
         case 'ADD_PROMOTION':
+          console.log('💾 Saving new promotion to database:', action.payload.title);
           await SupabaseService.createPromotion(action.payload);
+          console.log('✅ Promotion saved to database successfully');
           setTimeout(() => refetchPromotions(), 100);
           break;
+          
         case 'UPDATE_PROMOTION':
+          console.log('💾 Updating promotion in database:', action.payload.id);
           await SupabaseService.updatePromotion(action.payload.id, action.payload);
+          console.log('✅ Promotion updated in database successfully');
           setTimeout(() => refetchPromotions(), 100);
           break;
+          
         case 'APPROVE_PROMOTION':
+          console.log('💾 Approving promotion in database:', action.payload.id);
           const promotion = enhancedState.promotions.find(p => p.id === action.payload.id);
           if (promotion) {
             await SupabaseService.updatePromotion(action.payload.id, {
@@ -1126,9 +1160,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
               reviewedBy: action.payload.adminId
             });
           }
+          console.log('✅ Promotion approved in database successfully');
           setTimeout(() => refetchPromotions(), 100);
           break;
+          
         case 'REJECT_PROMOTION':
+          console.log('💾 Rejecting promotion in database:', action.payload.id);
           const rejectedPromotion = enhancedState.promotions.find(p => p.id === action.payload.id);
           if (rejectedPromotion) {
             await SupabaseService.updatePromotion(action.payload.id, {
@@ -1140,13 +1177,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
               rejectionReason: action.payload.reason
             });
           }
+          console.log('✅ Promotion rejected in database successfully');
           setTimeout(() => refetchPromotions(), 100);
           break;
+          
         case 'ADD_RETURN_REQUEST':
+          console.log('💾 Saving new return request to database:', action.payload.id);
           await SupabaseService.createReturnRequest(action.payload);
+          console.log('✅ Return request saved to database successfully');
           setTimeout(() => refetchReturnRequests(), 100);
           break;
+          
         case 'APPROVE_RETURN_REQUEST':
+          console.log('💾 Approving return request in database:', action.payload.id);
           const returnRequest = enhancedState.returnRequests.find(r => r.id === action.payload.id);
           if (returnRequest) {
             await SupabaseService.updateReturnRequest(action.payload.id, {
@@ -1158,9 +1201,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
               processedAt: new Date().toISOString()
             });
           }
+          console.log('✅ Return request approved in database successfully');
           setTimeout(() => refetchReturnRequests(), 100);
           break;
+          
         case 'REJECT_RETURN_REQUEST':
+          console.log('💾 Rejecting return request in database:', action.payload.id);
           const rejectedReturn = enhancedState.returnRequests.find(r => r.id === action.payload.id);
           if (rejectedReturn) {
             await SupabaseService.updateReturnRequest(action.payload.id, {
@@ -1171,34 +1217,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
               processedAt: new Date().toISOString()
             });
           }
+          console.log('✅ Return request rejected in database successfully');
          setTimeout(() => refetchReturnRequests(), 100);
           break;
+          
         case 'APPROVE_USER':
+          console.log('💾 Approving user in database:', action.payload.pendingUserId);
           await SupabaseService.approvePendingUser(action.payload.pendingUserId, action.payload.adminId);
+          console.log('✅ User approved in database successfully');
          setTimeout(() => {
            refetchUsers();
            refetchPendingUsers();
          }, 100);
           break;
+          
         case 'REJECT_USER':
+          console.log('💾 Rejecting user in database:', action.payload.pendingUserId);
           await SupabaseService.rejectPendingUser(action.payload.pendingUserId, action.payload.adminId, action.payload.reason);
+          console.log('✅ User rejected in database successfully');
          setTimeout(() => refetchPendingUsers(), 100);
           break;
+          
         case 'ADD_PENDING_USER':
+          console.log('💾 Saving pending user to database:', action.payload.name);
           await SupabaseService.createPendingUser(action.payload);
+          console.log('✅ Pending user saved to database successfully');
          setTimeout(() => refetchPendingUsers(), 100);
           break;
-        // For other actions, they only update local state
+          
+        case 'UPDATE_PLATFORM_SETTINGS':
+          console.log('💾 Updating platform settings in database');
+          // Update each setting individually
+          for (const [key, value] of Object.entries(action.payload)) {
+            await SupabaseService.updatePlatformSetting(key, value, enhancedState.currentUser?.id || 'system');
+          }
+          console.log('✅ Platform settings updated in database successfully');
+          break;
+          
+        default:
+          // For other actions, they only update local state
+          console.log('ℹ️ Action only updates local state:', action.type);
       }
+      
+      console.log('✅ Live database update completed for:', action.type);
     } catch (error) {
       console.error('Error updating Supabase:', error);
       // Show user-friendly error message
       if (error instanceof Error) {
-        console.warn(`Database operation failed: ${error.message}. Changes saved locally only.`);
+        console.warn(`❌ Database operation failed: ${error.message}. Changes saved locally only.`);
       }
       // Still trigger refetch to ensure consistency
       setTimeout(() => {
-        // Add specific refetch based on action type if needed
+        console.log('🔄 Triggering data refetch to ensure consistency');
       }, 100);
       // The local state was already updated above for immediate feedback
     }
