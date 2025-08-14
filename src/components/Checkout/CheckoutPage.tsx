@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Product, Order, OrderItem } from '../../types';
+import { PayFastIntegration } from '../Payment/PayFastIntegration';
 
 interface CheckoutPageProps {
   cart: { [productId: string]: number };
@@ -27,6 +28,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const [selectedPayment, setSelectedPayment] = useState<'payfast' | 'kazang' | 'shop2shop' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [showPayFastIntegration, setShowPayFastIntegration] = useState(false);
 
   const currentUser = state.currentUser!;
 
@@ -95,6 +97,12 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const handlePayment = async () => {
     if (!selectedPayment) return;
     
+    // Handle PayFast payment with custom integration
+    if (selectedPayment === 'payfast') {
+      setShowPayFastIntegration(true);
+      return;
+    }
+    
     setIsProcessing(true);
     
     try {
@@ -142,6 +150,90 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
     }
   };
 
+  const handlePayFastSuccess = (paymentData: any) => {
+    console.log('PayFast payment successful:', paymentData);
+    
+    // Create orders for each wholesaler
+    orderGroups.forEach((orderGroup, index) => {
+      const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
+        productId: product.id,
+        productName: product.name,
+        quantity,
+        price: getDiscountedPrice(product),
+        total: getDiscountedPrice(product) * quantity
+      }));
+
+      const order: Order = {
+        id: `${Date.now()}-${index}`,
+        retailerId: currentUser.id,
+        wholesalerId: orderGroup.wholesaler.id,
+        items: orderItems,
+        total: orderItems.reduce((sum, item) => sum + item.total, 0),
+        status: 'pending',
+        paymentStatus: 'paid',
+        paymentMethod: 'payfast',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      dispatch({ type: 'ADD_ORDER', payload: order });
+    });
+    
+    setOrderPlaced(true);
+    setShowPayFastIntegration(false);
+    
+    // Auto-complete after showing success message
+    setTimeout(() => {
+      onOrderComplete();
+    }, 3000);
+  };
+
+  const handlePayFastError = (error: string) => {
+    console.error('PayFast payment failed:', error);
+    alert(`Payment failed: ${error}`);
+    setShowPayFastIntegration(false);
+  };
+
+  const handlePayFastCancel = () => {
+    setShowPayFastIntegration(false);
+    setSelectedPayment(null);
+  };
+
+  // Show PayFast integration if selected
+  if (showPayFastIntegration) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 p-4">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              onClick={handlePayFastCancel}
+              className="p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">PayFast Payment</h1>
+              <p className="text-gray-600">Complete your payment securely</p>
+            </div>
+          </div>
+
+          <PayFastIntegration
+            orderData={{
+              orderId: `ORDER-${Date.now()}`,
+              amount: finalTotal,
+              customerEmail: currentUser.email,
+              customerName: currentUser.name,
+              description: `NWI B2B Order - ${cartItems.length} items`
+            }}
+            onSuccess={handlePayFastSuccess}
+            onError={handlePayFastError}
+            onCancel={handlePayFastCancel}
+          />
+        </div>
+      </div>
+    );
+  }
   if (orderPlaced) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
@@ -291,7 +383,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
                   </div>
                   <div className="flex-1 text-left">
                     <h4 className="font-semibold text-gray-900">PayFast</h4>
-                    <p className="text-sm text-gray-600">Secure online payment gateway</p>
+                    <p className="text-sm text-gray-600">Custom PayFast integration</p>
                   </div>
                   {selectedPayment === 'payfast' && (
                     <div className="bg-blue-500 text-white rounded-full p-1">
