@@ -2,6 +2,7 @@ import React from 'react';
 import { useState, useCallback } from 'react';
 import { Bell, LogOut, User, Menu, X, Settings, Wifi, WifiOff } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { NotificationService } from '../../services/notificationService';
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -78,6 +79,40 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
     setShowNotifications(false);
   }, [state.currentUser, dispatch]);
 
+  // Handle admin broadcast notifications
+  const handleBroadcastAnnouncement = useCallback(async () => {
+    if (state.currentUser?.role !== 'admin') return;
+    
+    const title = prompt('📢 Announcement Title:');
+    if (!title) return;
+    
+    const message = prompt('📢 Announcement Message:');
+    if (!message) return;
+    
+    const targetAudience = prompt('🎯 Target Audience (all/wholesalers/retailers/support) or leave empty for all:') || 'all';
+    
+    let targetRoles: string[] = [];
+    if (targetAudience !== 'all') {
+      targetRoles = targetAudience.split(',').map(role => role.trim());
+    }
+    
+    // Dispatch broadcast notification
+    dispatch({
+      type: 'BROADCAST_NOTIFICATION',
+      payload: {
+        title: `📢 ${title}`,
+        message,
+        type: 'system',
+        priority: 'high',
+        targetRoles: targetRoles.length > 0 ? targetRoles : undefined
+      }
+    });
+    
+    // Send push notification
+    await NotificationService.sendBroadcastNotification(title, message, targetRoles.length > 0 ? targetRoles : undefined);
+    
+    alert('📢 Announcement sent successfully!');
+  }, [state.currentUser, dispatch]);
   const notifications = getNotifications();
   const unreadNotifications = notifications.filter(n => !n.read);
 
@@ -135,6 +170,17 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
               </div>
             )}
           </div>
+
+          {/* Admin Broadcast Button */}
+          {state.currentUser?.role === 'admin' && (
+            <button
+              onClick={handleBroadcastAnnouncement}
+              className="p-3 lg:p-4 text-purple-600 hover:text-purple-900 hover:bg-purple-50 rounded-xl lg:rounded-2xl transition-all duration-200 hover:shadow-md active:scale-95"
+              title="Send Announcement"
+            >
+              <Settings className="w-5 h-5 lg:w-6 lg:h-6" />
+            </button>
+          )}
 
           <div className="relative">
             <button 

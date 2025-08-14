@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { SupabaseService } from '../services/supabaseService';
 import { User, Product, Order, SupportTicket, Promotion, Analytics, ReturnRequest, PendingUser, WholesalerAnalytics, Notification } from '../types';
+import { NotificationService } from '../services/notificationService';
 
 interface PlatformSettings {
   userRegistrationEnabled: boolean;
@@ -78,6 +79,8 @@ type AppAction =
  | { type: 'MARK_NOTIFICATION_READ'; payload: string }
  | { type: 'MARK_ALL_NOTIFICATIONS_READ'; payload: string }
  | { type: 'DELETE_NOTIFICATION'; payload: string };
+  | { type: 'BROADCAST_NOTIFICATION'; payload: { title: string; message: string; type: Notification['type']; priority: Notification['priority']; targetRoles?: string[]; targetUsers?: string[] } }
+  | { type: 'SEND_TARGETED_NOTIFICATION'; payload: { userId: string; title: string; message: string; type: Notification['type']; priority: Notification['priority']; data?: any } };
 
 const initialState: AppState = {
   currentUser: null,
@@ -641,6 +644,49 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         notifications: state.notifications.filter(n => n.id !== action.payload)
       };
+    case 'BROADCAST_NOTIFICATION':
+      // Create notifications for all targeted users
+      const broadcastNotifications: Notification[] = [];
+      const { title, message, type, priority, targetRoles, targetUsers } = action.payload;
+      
+      // If specific users are targeted
+      if (targetUsers && targetUsers.length > 0) {
+        targetUsers.forEach(userId => {
+          broadcastNotifications.push(createNotification(userId, type, title, message, priority));
+        });
+      }
+      // If specific roles are targeted
+      else if (targetRoles && targetRoles.length > 0) {
+        state.users.forEach(user => {
+          if (targetRoles.includes(user.role)) {
+            broadcastNotifications.push(createNotification(user.id, type, title, message, priority));
+          }
+        });
+      }
+      // If no specific targeting, send to all users
+      else {
+        state.users.forEach(user => {
+          broadcastNotifications.push(createNotification(user.id, type, title, message, priority));
+        });
+      }
+      
+      return {
+        ...state,
+        notifications: [...state.notifications, ...broadcastNotifications]
+      };
+    case 'SEND_TARGETED_NOTIFICATION':
+      const targetedNotification = createNotification(
+        action.payload.userId,
+        action.payload.type,
+        action.payload.title,
+        action.payload.message,
+        action.payload.priority,
+        action.payload.data
+      );
+      return {
+        ...state,
+        notifications: [...state.notifications, targetedNotification]
+      };
     default:
       return state;
   }
@@ -669,36 +715,56 @@ const createNotification = (
 // Live notification system
 const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppAction>) => {
   useEffect(() => {
+    // Initialize notification service
+    NotificationService.initialize();
+    
     // Generate notifications for new orders
     const generateOrderNotifications = (order: Order) => {
       const wholesaler = state.users.find(u => u.id === order.wholesalerId);
       const retailer = state.users.find(u => u.id === order.retailerId);
       
       if (wholesaler) {
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: createNotification(
-            order.wholesalerId,
-            'order',
-            'New Order Received! 🛒',
-            `${retailer?.name || 'A retailer'} placed an order worth R${order.total.toLocaleString()}`,
-            'high',
-            { orderId: order.id, retailerName: retailer?.name, total: order.total }
-          )
+        const notification = createNotification(
+          order.wholesalerId,
+          'order',
+          'New Order Received! 🛒',
+          `${retailer?.name || 'A retailer'} placed an order worth R${order.total.toLocaleString()}`,
+          'high',
+          { orderId: order.id, retailerName: retailer?.name, total: order.total }
+        );
+        dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+        
+        // Send push notification
+        NotificationService.sendPushNotification({
+          title: 'New Order Received! 🛒',
+          body: `${retailer?.name || 'A retailer'} placed an order worth R${order.total.toLocaleString()}`,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: `order-${order.id}`,
+          data: { orderId: order.id, type: 'order' }
         });
       }
       
       // Notify admins about new orders
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: createNotification(
-          'admin',
-          'order',
-          'New Platform Order',
-          `Order #${order.id} placed by ${retailer?.name} for R${order.total.toLocaleString()}`,
-          'medium',
-          { orderId: order.id, retailerName: retailer?.name, wholesalerName: wholesaler?.name }
-        )
+      const adminNotification = createNotification(
+        'admin',
+        'order',
+        'New Platform Order',
+        `Order #${order.id} placed by ${retailer?.name} for R${order.total.toLocaleString()}`,
+        'medium',
+        { orderId: order.id, retailerName: retailer?.name, wholesalerName: wholesaler?.name }
+      );
+      dispatch({ type: 'ADD_NOTIFICATION', payload: adminNotification });
+      
+      // Send push notification to admins
+      state.users.filter(u => u.role === 'admin').forEach(admin => {
+        NotificationService.sendPushNotification({
+          title: 'New Platform Order',
+          body: `Order #${order.id} placed by ${retailer?.name} for R${order.total.toLocaleString()}`,
+          icon: '/favicon.ico',
+          tag: `admin-order-${order.id}`,
+          data: { orderId: order.id, type: 'order' }
+        });
       });
     };
 
@@ -736,16 +802,23 @@ const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppActi
         }
         
         if (title && retailer) {
-          dispatch({
-            type: 'ADD_NOTIFICATION',
-            payload: createNotification(
-              order.retailerId,
-              'order',
-              title,
-              message,
-              priority,
-              { orderId: order.id, status: order.status }
-            )
+          const notification = createNotification(
+            order.retailerId,
+            'order',
+            title,
+            message,
+            priority,
+            { orderId: order.id, status: order.status }
+          );
+          dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+          
+          // Send push notification
+          NotificationService.sendPushNotification({
+            title,
+            body: message,
+            icon: '/favicon.ico',
+            tag: `order-status-${order.id}`,
+            data: { orderId: order.id, status: order.status, type: 'order' }
           });
         }
       }
@@ -758,30 +831,46 @@ const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppActi
       // Notify retailers about new products in categories they might be interested in
       const retailers = state.users.filter(u => u.role === 'retailer');
       retailers.forEach(retailer => {
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: createNotification(
-            retailer.id,
-            'product',
-            'New Product Available! 🆕',
-            `${wholesaler?.name} added "${product.name}" in ${product.category} category`,
-            'low',
-            { productId: product.id, productName: product.name, category: product.category, wholesalerName: wholesaler?.name }
-          )
+        const notification = createNotification(
+          retailer.id,
+          'product',
+          'New Product Available! 🆕',
+          `${wholesaler?.name} added "${product.name}" in ${product.category} category`,
+          'low',
+          { productId: product.id, productName: product.name, category: product.category, wholesalerName: wholesaler?.name }
+        );
+        dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+        
+        // Send push notification
+        NotificationService.sendPushNotification({
+          title: 'New Product Available! 🆕',
+          body: `${wholesaler?.name} added "${product.name}" in ${product.category} category`,
+          icon: '/favicon.ico',
+          tag: `product-${product.id}`,
+          data: { productId: product.id, type: 'product' }
         });
       });
       
       // Notify admins
-      dispatch({
-        type: 'ADD_NOTIFICATION',
-        payload: createNotification(
-          'admin',
-          'product',
-          'New Product Added',
-          `${wholesaler?.name} added "${product.name}" to the platform`,
-          'low',
-          { productId: product.id, productName: product.name, wholesalerName: wholesaler?.name }
-        )
+      const adminNotification = createNotification(
+        'admin',
+        'product',
+        'New Product Added',
+        `${wholesaler?.name} added "${product.name}" to the platform`,
+        'low',
+        { productId: product.id, productName: product.name, wholesalerName: wholesaler?.name }
+      );
+      dispatch({ type: 'ADD_NOTIFICATION', payload: adminNotification });
+      
+      // Send push notification to admins
+      state.users.filter(u => u.role === 'admin').forEach(admin => {
+        NotificationService.sendPushNotification({
+          title: 'New Product Added',
+          body: `${wholesaler?.name} added "${product.name}" to the platform`,
+          icon: '/favicon.ico',
+          tag: `admin-product-${product.id}`,
+          data: { productId: product.id, type: 'product' }
+        });
       });
     };
 
@@ -815,16 +904,31 @@ const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppActi
         // Notify all retailers about new promotions
         const retailers = state.users.filter(u => u.role === 'retailer');
         retailers.forEach(retailer => {
-          dispatch({
-            type: 'ADD_NOTIFICATION',
-            payload: createNotification(
-              retailer.id,
-              'promotion',
-              'New Promotion Available! 🎉',
-              `${wholesaler?.name}: ${promotion.title} - ${promotion.discount}% OFF`,
-              'high',
-              { promotionId: promotion.id, title: promotion.title, discount: promotion.discount, wholesalerName: wholesaler?.name }
-            )
+          const notification = createNotification(
+            retailer.id,
+            'promotion',
+            'New Promotion Available! 🎉',
+            `${wholesaler?.name}: ${promotion.title} - ${promotion.discount}% OFF`,
+            'high',
+            { promotionId: promotion.id, title: promotion.title, discount: promotion.discount, wholesalerName: wholesaler?.name }
+          );
+          dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+          
+          // Send push notification
+          NotificationService.sendPushNotification({
+            title: 'New Promotion Available! 🎉',
+            body: `${wholesaler?.name}: ${promotion.title} - ${promotion.discount}% OFF`,
+            icon: '/favicon.ico',
+            tag: `promotion-${promotion.id}`,
+            data: { promotionId: promotion.id, type: 'promotion' }
+          });
+          // Send push notification
+          NotificationService.sendPushNotification({
+            title: 'Low Stock Alert! ⚠️',
+            body: `"${product.name}" has only ${product.stock} units remaining`,
+            icon: '/favicon.ico',
+            tag: `low-stock-${product.id}`,
+            data: { productId: product.id, type: 'product', stock: product.stock }
           });
         });
       }
@@ -842,16 +946,25 @@ const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppActi
           return orderDate.toDateString() === now.toDateString();
         });
         
-        dispatch({
-          type: 'ADD_NOTIFICATION',
-          payload: createNotification(
-            'admin',
-            'system',
-            'Daily Platform Summary 📊',
-            `${todayOrders.length} new orders today. Total revenue: R${todayOrders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}`,
-            'low',
-            { ordersCount: todayOrders.length, revenue: todayOrders.reduce((sum, order) => sum + order.total, 0) }
-          )
+        const notification = createNotification(
+          'admin',
+          'system',
+          'Daily Platform Summary 📊',
+          `${todayOrders.length} new orders today. Total revenue: R${todayOrders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}`,
+          'low',
+          { ordersCount: todayOrders.length, revenue: todayOrders.reduce((sum, order) => sum + order.total, 0) }
+        );
+        dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
+        
+        // Send push notification to admins
+        state.users.filter(u => u.role === 'admin').forEach(admin => {
+          NotificationService.sendPushNotification({
+            title: 'Daily Platform Summary 📊',
+            body: `${todayOrders.length} new orders today. Total revenue: R${todayOrders.reduce((sum, order) => sum + order.total, 0).toLocaleString()}`,
+            icon: '/favicon.ico',
+            tag: 'daily-summary',
+            data: { type: 'system', date: now.toDateString() }
+          });
         });
       }
     };
@@ -866,6 +979,31 @@ const useNotificationSystem = (state: AppState, dispatch: React.Dispatch<AppActi
       clearInterval(notificationInterval);
     };
   }, [state.products, state.orders, state.users, dispatch]);
+  
+  // Listen for real-time notification events
+  useEffect(() => {
+    const handleNotificationEvent = (event: CustomEvent) => {
+      const { type, data } = event.detail;
+      
+      switch (type) {
+        case 'product-added':
+          generateProductNotifications(data);
+          break;
+        case 'order-created':
+          generateOrderNotifications(data);
+          break;
+        case 'promotion-approved':
+          generatePromotionNotifications(data);
+          break;
+      }
+    };
+    
+    window.addEventListener('notification-event', handleNotificationEvent as EventListener);
+    
+    return () => {
+      window.removeEventListener('notification-event', handleNotificationEvent as EventListener);
+    };
+  }, [state.users, dispatch]);
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {

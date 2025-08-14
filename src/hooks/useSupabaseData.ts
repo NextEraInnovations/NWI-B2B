@@ -142,6 +142,29 @@ export function useSupabaseData() {
   const handleRealtimeUpdate = (tableName: string) => (payload: any) => {
     console.log(`🔄 Real-time update for ${tableName}:`, payload);
     
+    // Emit notification events for real-time updates
+    if (payload.eventType === 'INSERT') {
+      switch (tableName) {
+        case 'products':
+          window.dispatchEvent(new CustomEvent('notification-event', {
+            detail: { type: 'product-added', data: transformProduct(payload.new) }
+          }));
+          break;
+        case 'orders':
+          window.dispatchEvent(new CustomEvent('notification-event', {
+            detail: { type: 'order-created', data: payload.new }
+          }));
+          break;
+        case 'promotions':
+          if (payload.new.status === 'approved') {
+            window.dispatchEvent(new CustomEvent('notification-event', {
+              detail: { type: 'promotion-approved', data: transformPromotion(payload.new) }
+            }));
+          }
+          break;
+      }
+    }
+    
     switch (tableName) {
       case 'users':
         if (payload.eventType === 'INSERT') {
