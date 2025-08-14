@@ -923,13 +923,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       switch (action.type) {
         case 'ADD_PRODUCT':
+          console.log('Saving product to database:', action.payload);
           await SupabaseService.createProduct(action.payload);
+          console.log('Product saved successfully to database');
           break;
         case 'UPDATE_PRODUCT':
+          console.log('Updating product in database:', action.payload.id);
           await SupabaseService.updateProduct(action.payload.id, action.payload);
+          console.log('Product updated successfully in database');
           break;
         case 'DELETE_PRODUCT':
+          console.log('Deleting product from database:', action.payload);
           await SupabaseService.deleteProduct(action.payload);
+          console.log('Product deleted successfully from database');
           break;
         case 'ADD_ORDER':
           await SupabaseService.createOrder(action.payload);

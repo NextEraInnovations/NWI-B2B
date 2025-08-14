@@ -73,6 +73,13 @@ export class SupabaseService {
 
   // Product operations
   static async createProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured. Product creation skipped.');
+      return { ...product, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Product;
+    }
+
+    console.log('Creating product in Supabase:', product);
+
     const { data, error } = await supabase
       .from('products')
       .insert([{
@@ -90,11 +97,24 @@ export class SupabaseService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error creating product:', error);
+      this.handleError(error, 'createProduct');
+      throw error;
+    }
+    
+    console.log('Product created successfully:', data);
     return this.transformProduct(data);
   }
 
   static async updateProduct(id: string, updates: Partial<Product>) {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured. Product update skipped.');
+      return { ...updates, id, updatedAt: new Date().toISOString() } as Product;
+    }
+
+    console.log('Updating product in Supabase:', id, updates);
+
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -111,17 +131,36 @@ export class SupabaseService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error updating product:', error);
+      this.handleError(error, 'updateProduct');
+      throw error;
+    }
+    
+    console.log('Product updated successfully:', data);
     return this.transformProduct(data);
   }
 
   static async deleteProduct(id: string) {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured. Product deletion skipped.');
+      return;
+    }
+
+    console.log('Deleting product from Supabase:', id);
+
     const { error } = await supabase
       .from('products')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error deleting product:', error);
+      this.handleError(error, 'deleteProduct');
+      throw error;
+    }
+    
+    console.log('Product deleted successfully');
   }
 
   static async getProducts() {

@@ -95,17 +95,40 @@ export class FunctionalityTester {
   static async testProductManagement(): Promise<boolean> {
     try {
       if (!isSupabaseConfigured) {
-        console.log('✅ Product management test passed (demo mode)');
+        console.log('✅ Product management test passed (local mode)');
         return true;
       }
       
       console.log('🔍 Testing product management...');
       
-      // Use the test wholesaler user ID
-      const existingWholesalerId = '00000000-0000-0000-0000-000000000002';
+      // First check if we have any wholesaler users
+      const users = await SupabaseService.getUsers();
+      const wholesaler = users.find(u => u.role === 'wholesaler');
+      
+      if (!wholesaler) {
+        console.log('⚠️ No wholesaler found, creating test wholesaler...');
+        const testWholesaler = await SupabaseService.createUser({
+          name: 'Test Wholesaler',
+          email: 'test-wholesaler@example.com',
+          role: 'wholesaler',
+          businessName: 'Test Wholesale Business',
+          phone: '+27123456789',
+          address: 'Test Address',
+          verified: true,
+          status: 'active'
+        });
+        console.log('✅ Test wholesaler created:', testWholesaler.id);
+      }
+      
+      const wholesalerId = wholesaler?.id || (await SupabaseService.getUsers()).find(u => u.role === 'wholesaler')?.id;
+      
+      if (!wholesalerId) {
+        console.error('❌ Could not find or create wholesaler for testing');
+        return false;
+      }
       
       const testProduct = {
-        wholesalerId: existingWholesalerId,
+        wholesalerId: wholesalerId,
         name: `Test Product ${Date.now()}`,
         description: 'A test product for functionality testing',
         price: 99.99,
@@ -118,6 +141,18 @@ export class FunctionalityTester {
 
       const product = await SupabaseService.createProduct(testProduct);
       console.log('✅ Product creation successful:', product.id);
+      
+      // Test product update
+      const updatedProduct = await SupabaseService.updateProduct(product.id, {
+        ...product,
+        name: `Updated ${product.name}`,
+        price: 149.99
+      });
+      console.log('✅ Product update successful:', updatedProduct.id);
+      
+      // Clean up test product
+      await SupabaseService.deleteProduct(product.id);
+      console.log('✅ Product deletion successful');
       
       return true;
     } catch (error) {

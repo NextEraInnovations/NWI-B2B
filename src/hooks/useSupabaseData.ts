@@ -142,10 +142,12 @@ export function useSupabaseData() {
 
       // Check if Supabase is properly configured
       if (!isSupabaseConfigured) {
-        console.warn('Supabase not configured. Using demo data.');
+        console.warn('Supabase not configured. Using local data only.');
         setLoading(false);
         return;
       }
+
+      console.log('Fetching data from Supabase...');
 
       // Fetch all data in parallel
       const [
@@ -194,6 +196,15 @@ export function useSupabaseData() {
       const returnItemsData = handleResult(returnItemsResult, 'return_items');
       const pendingUsersData = handleResult(pendingUsersResult, 'pending_users');
 
+      console.log('Data fetched successfully:', {
+        users: usersData.length,
+        products: productsData.length,
+        orders: ordersData.length,
+        tickets: ticketsData.length,
+        promotions: promotionsData.length,
+        returnRequests: returnRequestsData.length,
+        pendingUsers: pendingUsersData.length
+      });
       setUsers(usersData.map(transformUser));
       setProducts(productsData.map(transformProduct));
       setTickets(ticketsData.map(transformTicket));
