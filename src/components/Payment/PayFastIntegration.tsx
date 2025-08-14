@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CreditCard, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface PayFastIntegrationProps {
@@ -17,155 +17,79 @@ interface PayFastIntegrationProps {
 export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: PayFastIntegrationProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [quantity, setQuantity] = useState(1);
+  const [amount, setAmount] = useState(orderData.amount);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  // TODO: Replace with your actual PayFast credentials
+  // Your custom PayFast configuration
   const PAYFAST_CONFIG = {
-    merchant_id: 'YOUR_MERCHANT_ID', // Replace with your PayFast merchant ID
-    merchant_key: 'YOUR_MERCHANT_KEY', // Replace with your PayFast merchant key
-    passphrase: 'YOUR_PASSPHRASE', // Replace with your PayFast passphrase (if used)
-    sandbox: true, // Set to false for production
-    return_url: `${window.location.origin}/payment/success`,
-    cancel_url: `${window.location.origin}/payment/cancel`,
-    notify_url: `${window.location.origin}/api/payfast/notify`, // Your webhook endpoint
+    receiver: '31365409', // Your PayFast receiver ID
+    action_url: 'https://payment.payfast.io/eng/process',
+    item_name: orderData.description || 'NWI B2B Order',
+    sandbox: false // Set to true for testing
   };
 
-  // Generate PayFast payment data
-  const generatePaymentData = () => {
-    const paymentData = {
-      // Merchant details
-      merchant_id: PAYFAST_CONFIG.merchant_id,
-      merchant_key: PAYFAST_CONFIG.merchant_key,
-      
-      // Transaction details
-      m_payment_id: orderData.orderId,
-      amount: orderData.amount.toFixed(2),
-      item_name: orderData.description,
-      item_description: `Order #${orderData.orderId}`,
-      
-      // Customer details
-      name_first: orderData.customerName.split(' ')[0] || '',
-      name_last: orderData.customerName.split(' ').slice(1).join(' ') || '',
-      email_address: orderData.customerEmail,
-      
-      // URLs
-      return_url: PAYFAST_CONFIG.return_url,
-      cancel_url: PAYFAST_CONFIG.cancel_url,
-      notify_url: PAYFAST_CONFIG.notify_url,
-      
-      // Additional fields
-      custom_str1: orderData.orderId,
-      custom_str2: 'NWI_B2B_PLATFORM',
-    };
-
-    return paymentData;
+  // Your custom JavaScript functions integrated into React
+  const customQuantitiesPayFast = (formElement: HTMLFormElement): boolean => {
+    const amountInput = formElement.elements.namedItem('amount') as HTMLInputElement;
+    const quantityInput = formElement.elements.namedItem('custom_quantity') as HTMLInputElement;
+    
+    if (amountInput && quantityInput) {
+      const baseAmount = parseFloat(amountInput.dataset.baseAmount || amountInput.value);
+      const quantity = parseFloat(quantityInput.value);
+      amountInput.value = (baseAmount * quantity).toFixed(2);
+    }
+    return true;
   };
 
-  // Generate signature for PayFast (you'll need to implement this based on PayFast docs)
-  const generateSignature = (data: any) => {
-    // TODO: Implement PayFast signature generation
-    // This should follow PayFast's signature generation algorithm
-    // See: https://developers.payfast.co.za/docs#signature_generation
+  const actionPayFastJavascript = (formElement: HTMLFormElement): boolean => {
+    // Check if shipping validation exists (you can customize this)
+    const shippingValidOrOff = true; // Set your shipping validation logic here
+    const customValid = shippingValidOrOff ? customQuantitiesPayFast(formElement) : false;
     
-    // Example implementation (you need to complete this):
-    const queryString = Object.keys(data)
-      .filter(key => data[key] !== '' && data[key] !== null)
-      .sort()
-      .map(key => `${key}=${encodeURIComponent(data[key])}`)
-      .join('&');
+    if (!shippingValidOrOff) {
+      return false;
+    }
     
-    // Add passphrase if configured
-    const stringToHash = PAYFAST_CONFIG.passphrase 
-      ? `${queryString}&passphrase=${PAYFAST_CONFIG.passphrase}`
-      : queryString;
+    if (typeof customValid !== 'undefined' && !customValid) {
+      return false;
+    }
     
-    // Generate MD5 hash (you'll need a crypto library or implement this)
-    // For now, returning empty - you need to implement proper signature generation
-    console.log('String to hash:', stringToHash);
-    return ''; // TODO: Return actual MD5 hash
+    return true;
   };
 
-  // Handle PayFast payment initiation
-  const initiatePayFastPayment = async () => {
-    try {
-      setIsProcessing(true);
-      setPaymentStatus('processing');
+  // Handle form submission with your custom validation
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    setPaymentStatus('processing');
 
-      const paymentData = generatePaymentData();
-      const signature = generateSignature(paymentData);
-
-      // Add signature to payment data
-      const finalPaymentData = {
-        ...paymentData,
-        signature: signature
-      };
-
-      console.log('PayFast Payment Data:', finalPaymentData);
-
-      // TODO: Replace this section with your custom PayFast integration
-      // Option 1: Direct form submission to PayFast
-      submitToPayFast(finalPaymentData);
-
-      // Option 2: API call to your backend
-      // await callYourPayFastAPI(finalPaymentData);
-
-      // Option 3: Custom payment flow
-      // await yourCustomPayFastFlow(finalPaymentData);
-
-    } catch (error) {
-      console.error('PayFast payment error:', error);
+    const formElement = e.currentTarget;
+    
+    // Run your custom PayFast JavaScript validation
+    const isValid = actionPayFastJavascript(formElement);
+    
+    if (!isValid) {
+      setIsProcessing(false);
       setPaymentStatus('error');
-      onError(error instanceof Error ? error.message : 'Payment failed');
+      onError('Payment validation failed');
+      return;
+    }
+
+    // Submit the form to PayFast
+    try {
+      formElement.submit();
+    } catch (error) {
+      setIsProcessing(false);
+      setPaymentStatus('error');
+      onError('Failed to submit payment form');
     }
   };
 
-  // Submit form to PayFast (direct integration)
-  const submitToPayFast = (paymentData: any) => {
-    // Create a form and submit to PayFast
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = PAYFAST_CONFIG.sandbox 
-      ? 'https://sandbox.payfast.co.za/eng/process'
-      : 'https://www.payfast.co.za/eng/process';
-
-    // Add all payment data as hidden inputs
-    Object.keys(paymentData).forEach(key => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = key;
-      input.value = paymentData[key];
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-  };
-
-  // TODO: Add your custom PayFast API integration here
-  const callYourPayFastAPI = async (paymentData: any) => {
-    // Example API call to your backend
-    const response = await fetch('/api/payfast/initiate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        paymentData,
-        orderData
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to initiate PayFast payment');
-    }
-
-    const result = await response.json();
-    
-    // Handle the response based on your API design
-    if (result.redirectUrl) {
-      window.location.href = result.redirectUrl;
-    } else if (result.paymentUrl) {
-      window.open(result.paymentUrl, '_blank');
-    }
+  // Handle quantity changes and update amount
+  const handleQuantityChange = (newQuantity: number) => {
+    setQuantity(newQuantity);
+    setAmount(orderData.amount * newQuantity);
   };
 
   // Handle payment success (called from return URL or webhook)
@@ -205,8 +129,16 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
             <span className="ml-2 font-medium">{orderData.orderId}</span>
           </div>
           <div>
-            <span className="text-gray-500">Amount:</span>
-            <span className="ml-2 font-bold text-green-600">R{orderData.amount.toLocaleString()}</span>
+            <span className="text-gray-500">Base Amount:</span>
+            <span className="ml-2 font-bold text-green-600">R{orderData.amount.toFixed(2)}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Quantity:</span>
+            <span className="ml-2 font-medium">{quantity}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">Total Amount:</span>
+            <span className="ml-2 font-bold text-green-600">R{amount.toFixed(2)}</span>
           </div>
           <div className="col-span-2">
             <span className="text-gray-500">Description:</span>
@@ -222,7 +154,7 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
           <span className="text-sm font-medium">Secure Payment</span>
         </div>
         <p className="text-xs text-green-700 mt-1">
-          Your payment is secured with 256-bit SSL encryption
+          Your payment is secured with PayFast's encryption
         </p>
       </div>
 
@@ -254,27 +186,94 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
-          onClick={initiatePayFastPayment}
-          disabled={isProcessing || paymentStatus === 'success'}
-          className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
-            isProcessing || paymentStatus === 'success'
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-          }`}
-        >
-          {isProcessing ? 'Processing...' : `Pay R${orderData.amount.toLocaleString()}`}
-        </button>
+      {/* Your Custom PayFast Form */}
+      <form 
+        ref={formRef}
+        onSubmit={handleFormSubmit}
+        name="PayFastPayNowForm" 
+        action={PAYFAST_CONFIG.action_url} 
+        method="post"
+        className="space-y-4"
+      >
+        {/* Hidden PayFast fields */}
+        <input type="hidden" name="cmd" value="_paynow" />
+        <input type="hidden" name="receiver" value={PAYFAST_CONFIG.receiver} />
+        <input type="hidden" name="item_name" value={PAYFAST_CONFIG.item_name} />
         
-        <button
-          onClick={onCancel}
-          disabled={isProcessing}
-          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
-        >
-          Cancel
-        </button>
+        {/* Amount field with base amount stored in data attribute */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="PayFastAmount" className="block text-sm font-medium text-gray-700 mb-2">
+              Amount (R):
+            </label>
+            <input
+              required
+              id="PayFastAmount"
+              type="number"
+              step="0.01"
+              name="amount"
+              min="5.00"
+              value={amount.toFixed(2)}
+              data-base-amount={orderData.amount.toFixed(2)}
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="custom_quantity" className="block text-sm font-medium text-gray-700 mb-2">
+              Quantity:
+            </label>
+            <input
+              required
+              id="custom_quantity"
+              type="number"
+              name="custom_quantity"
+              min="1"
+              value={quantity}
+              onChange={(e) => handleQuantityChange(parseInt(e.target.value) || 1)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-4">
+          <button
+            type="submit"
+            disabled={isProcessing || paymentStatus === 'success'}
+            className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
+              isProcessing || paymentStatus === 'success'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+            }`}
+          >
+            {isProcessing ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Processing...
+              </div>
+            ) : (
+              `Pay R${amount.toFixed(2)}`
+            )}
+          </button>
+          
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isProcessing}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      {/* PayFast Branding */}
+      <div className="mt-4 text-center">
+        <p className="text-xs text-gray-500">
+          Powered by PayFast - South Africa's leading payment gateway
+        </p>
       </div>
 
       {/* Development Notice */}
