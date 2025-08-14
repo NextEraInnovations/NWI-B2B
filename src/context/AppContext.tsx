@@ -78,7 +78,7 @@ type AppAction =
  | { type: 'ADD_NOTIFICATION'; payload: Notification }
  | { type: 'MARK_NOTIFICATION_READ'; payload: string }
  | { type: 'MARK_ALL_NOTIFICATIONS_READ'; payload: string }
- | { type: 'DELETE_NOTIFICATION'; payload: string };
+| { type: 'DELETE_NOTIFICATION'; payload: string }
   | { type: 'BROADCAST_NOTIFICATION'; payload: { title: string; message: string; type: Notification['type']; priority: Notification['priority']; targetRoles?: string[]; targetUsers?: string[] } }
   | { type: 'SEND_TARGETED_NOTIFICATION'; payload: { userId: string; title: string; message: string; type: Notification['type']; priority: Notification['priority']; data?: any } };
 
