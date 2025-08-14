@@ -29,6 +29,9 @@ interface AppState {
   returnRequests: ReturnRequest[];
   notifications: Notification[];
   analytics: Analytics;
+  loading?: boolean;
+  error?: string | null;
+  isConnected?: boolean;
   wholesalerAnalytics: WholesalerAnalytics[];
   platformSettings: PlatformSettings;
   systemStats: {
@@ -876,7 +879,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     returnRequests, 
     pendingUsers, 
     loading, 
-    error 
+    error,
+    isConnected,
+    refetchProducts,
+    refetchOrders,
+    refetchTickets,
+    refetchPromotions,
+    refetchReturnRequests,
+    refetchUsers,
+    refetchPendingUsers
   } = useSupabaseData();
 
   // Update state with real data from Supabase when it loads
@@ -901,7 +912,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const enhancedState: AppState = {
     ...state,
     loading,
-    error
+    error,
+    isConnected
   };
 
   // Enable live notification system
@@ -926,34 +938,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.log('Saving product to database:', action.payload);
           await SupabaseService.createProduct(action.payload);
           console.log('Product saved successfully to database');
+          // Trigger real-time update
+          setTimeout(() => refetchProducts(), 100);
           break;
         case 'UPDATE_PRODUCT':
           console.log('Updating product in database:', action.payload.id);
           await SupabaseService.updateProduct(action.payload.id, action.payload);
           console.log('Product updated successfully in database');
+          setTimeout(() => refetchProducts(), 100);
           break;
         case 'DELETE_PRODUCT':
           console.log('Deleting product from database:', action.payload);
           await SupabaseService.deleteProduct(action.payload);
           console.log('Product deleted successfully from database');
+          setTimeout(() => refetchProducts(), 100);
           break;
         case 'ADD_ORDER':
           await SupabaseService.createOrder(action.payload);
+          setTimeout(() => refetchOrders(), 100);
           break;
         case 'UPDATE_ORDER':
           await SupabaseService.updateOrder(action.payload.id, action.payload);
+          setTimeout(() => refetchOrders(), 100);
           break;
         case 'ADD_TICKET':
           await SupabaseService.createSupportTicket(action.payload);
+          setTimeout(() => refetchTickets(), 100);
           break;
         case 'UPDATE_TICKET':
           await SupabaseService.updateSupportTicket(action.payload.id, action.payload);
+          setTimeout(() => refetchTickets(), 100);
           break;
         case 'ADD_PROMOTION':
           await SupabaseService.createPromotion(action.payload);
+          setTimeout(() => refetchPromotions(), 100);
           break;
         case 'UPDATE_PROMOTION':
           await SupabaseService.updatePromotion(action.payload.id, action.payload);
+          setTimeout(() => refetchPromotions(), 100);
           break;
         case 'APPROVE_PROMOTION':
           const promotion = enhancedState.promotions.find(p => p.id === action.payload.id);
@@ -966,6 +988,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               reviewedBy: action.payload.adminId
             });
           }
+          setTimeout(() => refetchPromotions(), 100);
           break;
         case 'REJECT_PROMOTION':
           const rejectedPromotion = enhancedState.promotions.find(p => p.id === action.payload.id);
@@ -979,9 +1002,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
               rejectionReason: action.payload.reason
             });
           }
+          setTimeout(() => refetchPromotions(), 100);
           break;
         case 'ADD_RETURN_REQUEST':
           await SupabaseService.createReturnRequest(action.payload);
+          setTimeout(() => refetchReturnRequests(), 100);
           break;
         case 'APPROVE_RETURN_REQUEST':
           const returnRequest = enhancedState.returnRequests.find(r => r.id === action.payload.id);
@@ -995,6 +1020,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               processedAt: new Date().toISOString()
             });
           }
+          setTimeout(() => refetchReturnRequests(), 100);
           break;
         case 'REJECT_RETURN_REQUEST':
           const rejectedReturn = enhancedState.returnRequests.find(r => r.id === action.payload.id);
@@ -1007,15 +1033,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
               processedAt: new Date().toISOString()
             });
           }
+         setTimeout(() => refetchReturnRequests(), 100);
           break;
         case 'APPROVE_USER':
           await SupabaseService.approvePendingUser(action.payload.pendingUserId, action.payload.adminId);
+         setTimeout(() => {
+           refetchUsers();
+           refetchPendingUsers();
+         }, 100);
           break;
         case 'REJECT_USER':
           await SupabaseService.rejectPendingUser(action.payload.pendingUserId, action.payload.adminId, action.payload.reason);
+         setTimeout(() => refetchPendingUsers(), 100);
           break;
         case 'ADD_PENDING_USER':
           await SupabaseService.createPendingUser(action.payload);
+         setTimeout(() => refetchPendingUsers(), 100);
           break;
         // For other actions, they only update local state
       }
@@ -1025,6 +1058,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error instanceof Error) {
         console.warn(`Database operation failed: ${error.message}. Changes saved locally only.`);
       }
+      // Still trigger refetch to ensure consistency
+      setTimeout(() => {
+        // Add specific refetch based on action type if needed
+      }, 100);
       // The local state was already updated above for immediate feedback
     }
   };

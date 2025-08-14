@@ -13,6 +13,15 @@ export class SupabaseService {
     throw error;
   }
 
+  // Real-time notification helper
+  private static notifyRealTimeUpdate(operation: string, data: any) {
+    console.log(`🔄 Real-time ${operation}:`, data);
+    // Emit custom event for real-time updates
+    window.dispatchEvent(new CustomEvent('supabase-update', {
+      detail: { operation, data }
+    }));
+  }
+
   // User operations
   static async createUser(user: Omit<User, 'id' | 'createdAt'>) {
     if (!isSupabaseConfigured) {
@@ -104,6 +113,7 @@ export class SupabaseService {
     }
     
     console.log('Product created successfully:', data);
+    this.notifyRealTimeUpdate('product-created', data);
     return this.transformProduct(data);
   }
 
@@ -138,6 +148,7 @@ export class SupabaseService {
     }
     
     console.log('Product updated successfully:', data);
+    this.notifyRealTimeUpdate('product-updated', data);
     return this.transformProduct(data);
   }
 
@@ -161,6 +172,7 @@ export class SupabaseService {
     }
     
     console.log('Product deleted successfully');
+    this.notifyRealTimeUpdate('product-deleted', { id });
   }
 
   static async getProducts() {

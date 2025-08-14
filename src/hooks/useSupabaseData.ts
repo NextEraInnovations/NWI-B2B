@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User, Product, Order, SupportTicket, Promotion, ReturnRequest, PendingUser } from '../types';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 export function useSupabaseData() {
   const [users, setUsers] = useState<User[]>([]);
@@ -12,6 +13,8 @@ export function useSupabaseData() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [channels, setChannels] = useState<RealtimeChannel[]>([]);
 
   // Transform database row to application type
   const transformUser = (row: any): User => ({
@@ -135,6 +138,149 @@ export function useSupabaseData() {
     documents: row.documents || []
   });
 
+  // Real-time event handlers
+  const handleRealtimeUpdate = (tableName: string) => (payload: any) => {
+    console.log(`🔄 Real-time update for ${tableName}:`, payload);
+    
+    switch (tableName) {
+      case 'users':
+        if (payload.eventType === 'INSERT') {
+          setUsers(prev => [...prev, transformUser(payload.new)]);
+        } else if (payload.eventType === 'UPDATE') {
+          setUsers(prev => prev.map(item => item.id === payload.new.id ? transformUser(payload.new) : item));
+        } else if (payload.eventType === 'DELETE') {
+          setUsers(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+        break;
+        
+      case 'products':
+        if (payload.eventType === 'INSERT') {
+          setProducts(prev => [...prev, transformProduct(payload.new)]);
+        } else if (payload.eventType === 'UPDATE') {
+          setProducts(prev => prev.map(item => item.id === payload.new.id ? transformProduct(payload.new) : item));
+        } else if (payload.eventType === 'DELETE') {
+          setProducts(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+        break;
+        
+      case 'orders':
+        // For orders, we need to refetch to get the items
+        fetchOrders();
+        break;
+        
+      case 'order_items':
+        // When order items change, refetch orders
+        fetchOrders();
+        break;
+        
+      case 'support_tickets':
+        if (payload.eventType === 'INSERT') {
+          setTickets(prev => [...prev, transformTicket(payload.new)]);
+        } else if (payload.eventType === 'UPDATE') {
+          setTickets(prev => prev.map(item => item.id === payload.new.id ? transformTicket(payload.new) : item));
+        } else if (payload.eventType === 'DELETE') {
+          setTickets(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+        break;
+        
+      case 'promotions':
+        if (payload.eventType === 'INSERT') {
+          setPromotions(prev => [...prev, transformPromotion(payload.new)]);
+        } else if (payload.eventType === 'UPDATE') {
+          setPromotions(prev => prev.map(item => item.id === payload.new.id ? transformPromotion(payload.new) : item));
+        } else if (payload.eventType === 'DELETE') {
+          setPromotions(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+        break;
+        
+      case 'return_requests':
+        // For return requests, we need to refetch to get the items
+        fetchReturnRequests();
+        break;
+        
+      case 'return_items':
+        // When return items change, refetch return requests
+        fetchReturnRequests();
+        break;
+        
+      case 'pending_users':
+        if (payload.eventType === 'INSERT') {
+          setPendingUsers(prev => [...prev, transformPendingUser(payload.new)]);
+        } else if (payload.eventType === 'UPDATE') {
+          setPendingUsers(prev => prev.map(item => item.id === payload.new.id ? transformPendingUser(payload.new) : item));
+        } else if (payload.eventType === 'DELETE') {
+          setPendingUsers(prev => prev.filter(item => item.id !== payload.old.id));
+        }
+        break;
+    }
+  };
+
+  // Fetch individual data types
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from('users').select('*');
+    if (!error && data) {
+      setUsers(data.map(transformUser));
+    }
+  };
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase.from('products').select('*');
+    if (!error && data) {
+      setProducts(data.map(transformProduct));
+    }
+  };
+
+  const fetchOrders = async () => {
+    const [ordersResult, orderItemsResult] = await Promise.all([
+      supabase.from('orders').select('*'),
+      supabase.from('order_items').select('*')
+    ]);
+
+    if (!ordersResult.error && !orderItemsResult.error && ordersResult.data && orderItemsResult.data) {
+      const ordersWithItems = ordersResult.data.map((order: any) => {
+        const orderItems = orderItemsResult.data.filter((item: any) => item.order_id === order.id);
+        return transformOrder(order, orderItems);
+      });
+      setOrders(ordersWithItems);
+    }
+  };
+
+  const fetchTickets = async () => {
+    const { data, error } = await supabase.from('support_tickets').select('*');
+    if (!error && data) {
+      setTickets(data.map(transformTicket));
+    }
+  };
+
+  const fetchPromotions = async () => {
+    const { data, error } = await supabase.from('promotions').select('*');
+    if (!error && data) {
+      setPromotions(data.map(transformPromotion));
+    }
+  };
+
+  const fetchReturnRequests = async () => {
+    const [returnRequestsResult, returnItemsResult] = await Promise.all([
+      supabase.from('return_requests').select('*'),
+      supabase.from('return_items').select('*')
+    ]);
+
+    if (!returnRequestsResult.error && !returnItemsResult.error && returnRequestsResult.data && returnItemsResult.data) {
+      const returnRequestsWithItems = returnRequestsResult.data.map((returnReq: any) => {
+        const returnItems = returnItemsResult.data.filter((item: any) => item.return_request_id === returnReq.id);
+        return transformReturnRequest(returnReq, returnItems);
+      });
+      setReturnRequests(returnRequestsWithItems);
+    }
+  };
+
+  const fetchPendingUsers = async () => {
+    const { data, error } = await supabase.from('pending_users').select('*').eq('status', 'pending');
+    if (!error && data) {
+      setPendingUsers(data.map(transformPendingUser));
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -205,6 +351,7 @@ export function useSupabaseData() {
         returnRequests: returnRequestsData.length,
         pendingUsers: pendingUsersData.length
       });
+      
       setUsers(usersData.map(transformUser));
       setProducts(productsData.map(transformProduct));
       setTickets(ticketsData.map(transformTicket));
@@ -225,9 +372,11 @@ export function useSupabaseData() {
       });
       setReturnRequests(returnRequestsWithItems);
 
+      setIsConnected(true);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while fetching data');
+      setIsConnected(false);
     } finally {
       setLoading(false);
     }
@@ -237,25 +386,108 @@ export function useSupabaseData() {
     fetchData();
   }, []);
 
-  // Real-time subscriptions
+  // Setup real-time subscriptions
   useEffect(() => {
-    const channels = [
-      supabase.channel('users').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchData),
-      supabase.channel('products').on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData),
-      supabase.channel('orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchData),
-      supabase.channel('order_items').on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchData),
-      supabase.channel('support_tickets').on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchData),
-      supabase.channel('promotions').on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, fetchData),
-      supabase.channel('return_requests').on('postgres_changes', { event: '*', schema: 'public', table: 'return_requests' }, fetchData),
-      supabase.channel('return_items').on('postgres_changes', { event: '*', schema: 'public', table: 'return_items' }, fetchData),
-      supabase.channel('pending_users').on('postgres_changes', { event: '*', schema: 'public', table: 'pending_users' }, fetchData)
+    if (!isSupabaseConfigured) {
+      console.log('🔄 Real-time updates disabled (demo mode)');
+      return;
+    }
+
+    console.log('🔄 Setting up real-time subscriptions...');
+
+    const newChannels = [
+      supabase
+        .channel('users-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, handleRealtimeUpdate('users'))
+        .subscribe((status) => {
+          console.log('Users channel status:', status);
+        }),
+      
+      supabase
+        .channel('products-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handleRealtimeUpdate('products'))
+        .subscribe((status) => {
+          console.log('Products channel status:', status);
+        }),
+      
+      supabase
+        .channel('orders-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handleRealtimeUpdate('orders'))
+        .subscribe((status) => {
+          console.log('Orders channel status:', status);
+        }),
+      
+      supabase
+        .channel('order-items-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, handleRealtimeUpdate('order_items'))
+        .subscribe((status) => {
+          console.log('Order items channel status:', status);
+        }),
+      
+      supabase
+        .channel('tickets-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, handleRealtimeUpdate('support_tickets'))
+        .subscribe((status) => {
+          console.log('Support tickets channel status:', status);
+        }),
+      
+      supabase
+        .channel('promotions-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'promotions' }, handleRealtimeUpdate('promotions'))
+        .subscribe((status) => {
+          console.log('Promotions channel status:', status);
+        }),
+      
+      supabase
+        .channel('return-requests-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'return_requests' }, handleRealtimeUpdate('return_requests'))
+        .subscribe((status) => {
+          console.log('Return requests channel status:', status);
+        }),
+      
+      supabase
+        .channel('return-items-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'return_items' }, handleRealtimeUpdate('return_items'))
+        .subscribe((status) => {
+          console.log('Return items channel status:', status);
+        }),
+      
+      supabase
+        .channel('pending-users-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pending_users' }, handleRealtimeUpdate('pending_users'))
+        .subscribe((status) => {
+          console.log('Pending users channel status:', status);
+        })
     ];
 
-    channels.forEach(channel => channel.subscribe());
+    setChannels(newChannels);
+    console.log('✅ Real-time subscriptions established');
 
     return () => {
-      channels.forEach(channel => supabase.removeChannel(channel));
+      console.log('🔄 Cleaning up real-time subscriptions...');
+      newChannels.forEach(channel => supabase.removeChannel(channel));
+      setChannels([]);
     };
+  }, []);
+
+  // Connection status monitoring
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const checkConnection = async () => {
+      try {
+        const { error } = await supabase.from('users').select('count').limit(1);
+        setIsConnected(!error);
+      } catch (err) {
+        setIsConnected(false);
+      }
+    };
+
+    // Check connection every 30 seconds
+    const connectionInterval = setInterval(checkConnection, 30000);
+    checkConnection(); // Initial check
+
+    return () => clearInterval(connectionInterval);
   }, []);
 
   return {
@@ -268,6 +500,15 @@ export function useSupabaseData() {
     pendingUsers: error ? [] : pendingUsers,
     loading,
     error,
-    refetch: fetchData
+    isConnected,
+    refetch: fetchData,
+    // Individual refetch functions for targeted updates
+    refetchUsers: fetchUsers,
+    refetchProducts: fetchProducts,
+    refetchOrders: fetchOrders,
+    refetchTickets: fetchTickets,
+    refetchPromotions: fetchPromotions,
+    refetchReturnRequests: fetchReturnRequests,
+    refetchPendingUsers: fetchPendingUsers
   };
 }

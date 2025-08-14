@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 import { 
   ShoppingCart, 
   Package, 
@@ -40,6 +41,23 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: 'medium' as const });
   const [showCheckout, setShowCheckout] = useState(false);
+
+  // Real-time updates listener
+  useEffect(() => {
+    const handleRealTimeUpdate = (event: CustomEvent) => {
+      const { operation, data } = event.detail;
+      console.log('🔄 Retailer dashboard received update:', operation, data);
+      
+      // Force re-render by updating a timestamp or similar
+      // The data will be automatically updated via the context
+    };
+
+    window.addEventListener('supabase-update', handleRealTimeUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('supabase-update', handleRealTimeUpdate as EventListener);
+    };
+  }, []);
 
   const currentUser = state.currentUser!;
   const myOrders = state.orders.filter(o => o.retailerId === currentUser.id);
