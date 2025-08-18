@@ -235,7 +235,6 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                           onClick={() => handleNotificationClick(notification.id)}
                         >
                           <div className="flex items-start gap-3">
-                            <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 shadow-sm ${
                             <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
                               notification.priority === 'urgent' ? 'bg-red-500 animate-pulse' :
                               notification.priority === 'high' ? 'bg-orange-500' :
@@ -326,18 +325,6 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
                     </div>
                   )}
                   
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {unreadNotifications.length > 0 && (
-                    <div className="p-4 border-t border-gray-100/50">
-                      <button 
-                        onClick={handleMarkAllAsRead}
-                        className="w-full text-center text-base text-blue-600 hover:text-blue-800 font-semibold py-3 rounded-xl hover:bg-blue-50 transition-all duration-200 active:scale-95"
                   {allNotifications.length > 0 && (
                     <div className="p-3 border-t border-gray-100/50 bg-gray-50/50">
                       <div className="flex gap-2">
@@ -369,7 +356,7 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
               <p className="text-sm lg:text-base xl:text-lg font-semibold text-gray-900 truncate max-w-32 lg:max-w-none">
                 {state.currentUser.name}
               </p>
-              <span className={`inline-block px-3 lg:px-4 py-1 lg:py-1.5 rounded-full text-xs lg:text-sm font-semibold ${getRoleBadgeColor(state.currentUser.role)}`}>
+              <span className={\`inline-block px-3 lg:px-4 py-1 lg:py-1.5 rounded-full text-xs lg:text-sm font-semibold ${getRoleBadgeColor(state.currentUser.role)}`}>
                 {state.currentUser.role}
               </span>
             </div>
