@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CreditCard, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface PayFastIntegrationProps {
   orderData: {
@@ -12,9 +13,19 @@ interface PayFastIntegrationProps {
   onSuccess: (paymentData: any) => void;
   onError: (error: string) => void;
   onCancel: () => void;
+  onReturnToDashboard?: () => void;
+  onReturnToCart?: () => void;
 }
 
-export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: PayFastIntegrationProps) {
+export function PayFastIntegration({ 
+  orderData, 
+  onSuccess, 
+  onError, 
+  onCancel, 
+  onReturnToDashboard,
+  onReturnToCart 
+}: PayFastIntegrationProps) {
+  const { state } = useApp();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [quantity, setQuantity] = useState(1);
@@ -26,7 +37,9 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
     receiver: '31365409', // Your PayFast receiver ID
     action_url: 'https://payment.payfast.io/eng/process',
     item_name: orderData.description || 'NWI B2B Order',
-    sandbox: false // Set to true for testing
+    sandbox: false, // Set to true for testing
+    return_url: `${window.location.origin}/payment/success?order_id=${orderData.orderId}`,
+    cancel_url: `${window.location.origin}/payment/cancel?order_id=${orderData.orderId}`
   };
 
   // Your custom JavaScript functions integrated into React
@@ -94,20 +107,83 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
 
   // Handle payment success (called from return URL or webhook)
   useEffect(() => {
-    // Listen for payment success messages
+    // Listen for payment success/failure messages from PayFast return URLs
     const handlePaymentSuccess = (event: MessageEvent) => {
       if (event.data.type === 'PAYFAST_SUCCESS') {
         setPaymentStatus('success');
+        setIsProcessing(false);
         onSuccess(event.data.paymentData);
+        
+        // Navigate back to dashboard after successful payment
+        setTimeout(() => {
+          if (onReturnToDashboard) {
+            onReturnToDashboard();
+          }
+        }, 2000);
       } else if (event.data.type === 'PAYFAST_ERROR') {
         setPaymentStatus('error');
+        setIsProcessing(false);
         onError(event.data.error);
+      } else if (event.data.type === 'PAYFAST_CANCELLED') {
+        setPaymentStatus('cancelled');
+        setIsProcessing(false);
+        
+        // Navigate back to cart after payment cancellation
+        setTimeout(() => {
+          if (onReturnToCart) {
+            onReturnToCart();
+          } else {
+            onCancel();
+          }
+        }, 1000);
+      }
+    };
+
+    // Listen for URL changes to detect return from PayFast
+    const handleUrlChange = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment_status');
+      const orderId = urlParams.get('order_id');
+      
+      if (orderId === orderData.orderId) {
+        if (paymentStatus === 'success') {
+          setPaymentStatus('success');
+          setIsProcessing(false);
+          onSuccess({ orderId, status: 'success' });
+          
+          // Navigate back to dashboard
+          setTimeout(() => {
+            if (onReturnToDashboard) {
+              onReturnToDashboard();
+            }
+          }, 2000);
+        } else if (paymentStatus === 'cancelled') {
+          setPaymentStatus('cancelled');
+          setIsProcessing(false);
+          
+          // Navigate back to cart
+          setTimeout(() => {
+            if (onReturnToCart) {
+              onReturnToCart();
+            } else {
+              onCancel();
+            }
+          }, 1000);
+        }
       }
     };
 
     window.addEventListener('message', handlePaymentSuccess);
-    return () => window.removeEventListener('message', handlePaymentSuccess);
-  }, [onSuccess, onError]);
+    window.addEventListener('popstate', handleUrlChange);
+    
+    // Check URL on component mount
+    handleUrlChange();
+
+    return () => {
+      window.removeEventListener('message', handlePaymentSuccess);
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, [onSuccess, onError, onCancel, onReturnToDashboard, onReturnToCart, orderData.orderId]);
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
@@ -172,7 +248,7 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
           <div className="flex items-center gap-2 text-green-800">
             <CheckCircle className="w-4 h-4" />
-            <span className="text-sm font-medium">Payment Successful!</span>
+            <span className="text-sm font-medium">Payment Successful! Returning to dashboard...</span>
           </div>
         </div>
       )}
@@ -182,6 +258,15 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
           <div className="flex items-center gap-2 text-red-800">
             <AlertCircle className="w-4 h-4" />
             <span className="text-sm font-medium">Payment Failed</span>
+          </div>
+        </div>
+      )}
+
+      {paymentStatus === 'cancelled' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center gap-2 text-yellow-800">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm font-medium">Payment Cancelled. Returning to cart...</span>
           </div>
         </div>
       )}
@@ -199,6 +284,8 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
         <input type="hidden" name="cmd" value="_paynow" />
         <input type="hidden" name="receiver" value={PAYFAST_CONFIG.receiver} />
         <input type="hidden" name="item_name" value={PAYFAST_CONFIG.item_name} />
+        <input type="hidden" name="return_url" value={PAYFAST_CONFIG.return_url} />
+        <input type="hidden" name="cancel_url" value={PAYFAST_CONFIG.cancel_url} />
         
         {/* Amount field with base amount stored in data attribute */}
         <div className="grid grid-cols-2 gap-4">
@@ -241,9 +328,9 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
         <div className="flex gap-3 pt-4">
           <button
             type="submit"
-            disabled={isProcessing || paymentStatus === 'success'}
+            disabled={isProcessing || paymentStatus === 'success' || paymentStatus === 'cancelled'}
             className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-200 ${
-              isProcessing || paymentStatus === 'success'
+              isProcessing || paymentStatus === 'success' || paymentStatus === 'cancelled'
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
             }`}
@@ -261,8 +348,12 @@ export function PayFastIntegration({ orderData, onSuccess, onError, onCancel }: 
           <button
             type="button"
             onClick={onCancel}
-            disabled={isProcessing}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+            disabled={isProcessing || paymentStatus === 'success'}
+            className={`px-6 py-3 border border-gray-300 rounded-xl font-medium transition-colors ${
+              isProcessing || paymentStatus === 'success'
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
           >
             Cancel
           </button>

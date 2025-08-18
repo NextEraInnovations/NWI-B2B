@@ -59,6 +59,36 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
     };
   }, []);
 
+  // Handle payment return navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment_status');
+    const orderId = urlParams.get('order_id');
+    
+    if (paymentStatus === 'success' && orderId) {
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Show success message
+      alert('🎉 Payment successful! Your order has been placed.');
+      
+      // Clear cart if it exists
+      setCart({});
+      
+      // Navigate to orders tab to show the new order
+      // This would need to be passed from parent component
+      console.log('Payment successful for order:', orderId);
+    } else if (paymentStatus === 'cancelled' && orderId) {
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Show cancellation message
+      alert('Payment was cancelled. Your cart is still available.');
+      
+      console.log('Payment cancelled for order:', orderId);
+    }
+  }, []);
+
   const currentUser = state.currentUser!;
   const myOrders = state.orders.filter(o => o.retailerId === currentUser.id);
   const myTickets = state.tickets.filter(t => t.userId === currentUser.id);

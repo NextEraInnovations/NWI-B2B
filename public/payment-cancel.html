@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Cancelled - NWI B2B</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #FEF3C7 0%, #FCD34D 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        .cancel-icon {
+            width: 80px;
+            height: 80px;
+            background: #F59E0B;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            animation: shake 0.6s ease-out;
+        }
+        .x-mark {
+            width: 40px;
+            height: 40px;
+            stroke: white;
+            stroke-width: 3;
+            fill: none;
+        }
+        h1 {
+            color: #1F2937;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        p {
+            color: #6B7280;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .redirect-info {
+            background: #FEF3C7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #F59E0B;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="cancel-icon">
+            <svg class="x-mark" viewBox="0 0 52 52">
+                <path d="M16,16 L36,36 M36,16 L16,36"></path>
+            </svg>
+        </div>
+        <h1>Payment Cancelled</h1>
+        <p>Your payment was cancelled. Don't worry, no charges were made to your account.</p>
+        
+        <div class="redirect-info">
+            <div class="loading"></div>
+            <p style="margin: 10px 0 0 0; font-size: 14px;">
+                Taking you back to your cart...
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id');
+        
+        // Send cancellation message to parent window
+        if (window.opener) {
+            window.opener.postMessage({
+                type: 'PAYFAST_CANCELLED',
+                paymentData: {
+                    orderId: orderId,
+                    status: 'cancelled',
+                    timestamp: new Date().toISOString()
+                }
+            }, window.location.origin);
+        }
+        
+        // Redirect back to main application after 2 seconds
+        setTimeout(() => {
+            if (window.opener) {
+                window.close();
+            } else {
+                // If not opened in popup, redirect to main app
+                window.location.href = `/?payment_status=cancelled&order_id=${orderId}`;
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -232,6 +232,14 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
             onSuccess={handlePayFastSuccess}
             onError={handlePayFastError}
             onCancel={handlePayFastCancel}
+            onReturnToDashboard={() => {
+              // Clear cart and return to dashboard
+              onOrderComplete();
+            }}
+            onReturnToCart={() => {
+              // Return to cart (checkout page)
+              setShowPayFastIntegration(false);
+            }}
           />
         </div>
       </div>
