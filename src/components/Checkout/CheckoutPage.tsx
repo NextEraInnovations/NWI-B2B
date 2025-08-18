@@ -339,9 +339,13 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
                   {orderGroup.items.map(({ product, quantity }) => (
                     <div key={product.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
                       <img 
-                        src={product.imageUrl} 
+                        src={product.imageUrl || 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400'}
                         alt={product.name}
                         className="w-16 h-16 object-cover rounded-lg"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400';
+                        }}
                       />
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900">{product.name}</h4>
