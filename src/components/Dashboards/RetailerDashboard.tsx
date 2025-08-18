@@ -429,9 +429,15 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
             <img 
               src={product.imageUrl} 
               alt={product.name}
+              src={product.imageUrl || 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400'}
+              alt={product.name}
               className={`w-full h-48 xl:h-56 2xl:h-64 object-cover ${
                 isProductOnPromotion(product.id) ? 'ring-2 ring-orange-200' : ''
               }`}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400';
+              }}
             />
             <div className="p-4 xl:p-6">
               <div className="flex items-start justify-between mb-3">
