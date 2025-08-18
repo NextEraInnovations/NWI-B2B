@@ -413,7 +413,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 xl:gap-8">
         {filteredProducts.map((product) => (
-          <div key={product.id} className={`backdrop-blur-sm rounded-2xl xl:rounded-3xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 ${
+          <div key={product.id} className={`relative backdrop-blur-sm rounded-2xl xl:rounded-3xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 ${
             isProductOnPromotion(product.id) 
               ? 'bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 border-orange-300 ring-2 ring-orange-200 shadow-orange-100 animate-pulse' 
               : 'bg-white/80 border-white/20'
@@ -439,7 +439,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                 target.src = 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400';
               }}
             />
-            <div className="p-4 xl:p-6">
+            <div className="p-4 xl:p-6 flex flex-col h-full">
               <div className="flex items-start justify-between mb-3">
                 <h3 className={`font-bold text-base xl:text-lg line-clamp-2 ${
                   isProductOnPromotion(product.id) ? 'text-orange-900' : 'text-gray-900'
@@ -450,7 +450,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
               </div>
               <p className="text-gray-600 text-sm xl:text-base mb-4 line-clamp-2">{product.description}</p>
               
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mb-6 mt-auto">
                 <div className="flex justify-between">
                   <span className="text-sm xl:text-base text-gray-500">Price:</span>
                   <div className="text-right">
@@ -466,40 +466,53 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm xl:text-base text-gray-500">Stock:</span>
-                  <span className="font-medium text-gray-900 text-base xl:text-lg">{product.stock}</span>
+                  <span className={`font-medium text-base xl:text-lg ${
+                    product.stock <= 10 ? 'text-red-600' : 'text-gray-900'
+                  }`}>{product.stock} units</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm xl:text-base text-gray-500">Min Order:</span>
-                  <span className="font-medium text-gray-900 text-base xl:text-lg">{product.minOrderQuantity}</span>
+                  <span className="font-medium text-gray-900 text-base xl:text-lg">{product.minOrderQuantity} units</span>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex items-center justify-center gap-3">
                   <button
                     onClick={() => removeFromCart(product.id)}
                     disabled={!cart[product.id]}
-                    className="w-10 h-10 xl:w-12 xl:h-12 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95"
+                    className="w-10 h-10 xl:w-12 xl:h-12 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95 shadow-md hover:shadow-lg"
                   >
                     <Minus className="w-4 h-4 xl:w-5 xl:h-5" />
                   </button>
-                  <span className="w-12 xl:w-16 text-center font-bold text-base xl:text-lg">
+                  <div className="bg-gray-100 px-4 py-2 rounded-lg min-w-[60px] text-center">
+                    <span className="font-bold text-base xl:text-lg text-gray-900">
                     {cart[product.id] || 0}
-                  </span>
+                    </span>
+                  </div>
                   <button
                     onClick={() => addToCart(product.id)}
                     disabled={product.stock === 0 || (cart[product.id] || 0) >= product.stock}
-                    className="w-10 h-10 xl:w-12 xl:h-12 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95"
+                    className="w-10 h-10 xl:w-12 xl:h-12 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center active:scale-95 shadow-md hover:shadow-lg"
                   >
                     <Plus className="w-4 h-4 xl:w-5 xl:h-5" />
                   </button>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm xl:text-base text-gray-500">Total:</p>
-                  <p className="font-bold text-gray-900 text-base xl:text-lg">
+                
+                {cart[product.id] > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg text-center border border-blue-200">
+                    <p className="text-sm text-blue-600 mb-1">Cart Total</p>
+                    <p className="font-bold text-blue-900 text-lg xl:text-xl">
                     R{((cart[product.id] || 0) * getDiscountedPrice(product)).toFixed(0)}
-                  </p>
-                </div>
+                    </p>
+                  </div>
+                )}
+                
+                {product.stock === 0 && (
+                  <div className="bg-red-50 p-2 rounded-lg text-center border border-red-200">
+                    <p className="text-sm font-medium text-red-600">Out of Stock</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
