@@ -356,7 +356,7 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
               <p className="text-sm lg:text-base xl:text-lg font-semibold text-gray-900 truncate max-w-32 lg:max-w-none">
                 {state.currentUser.name}
               </p>
-              <span className={\`inline-block px-3 lg:px-4 py-1 lg:py-1.5 rounded-full text-xs lg:text-sm font-semibold ${getRoleBadgeColor(state.currentUser.role)}`}>
+              <span className={`inline-block px-3 lg:px-4 py-1 lg:py-1.5 rounded-full text-xs lg:text-sm font-semibold ${getRoleBadgeColor(state.currentUser.role)}`}>
                 {state.currentUser.role}
               </span>
             </div>
