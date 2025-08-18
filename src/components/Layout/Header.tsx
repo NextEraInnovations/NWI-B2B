@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useCallback } from 'react';
-import { Bell, LogOut, User, Menu, X, Settings, Wifi, WifiOff } from 'lucide-react';
+import { Bell, LogOut, User, Menu, X, Settings } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { NotificationService } from '../../services/notificationService';
 
@@ -156,21 +156,6 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
         </div>
 
         <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-6 xl:space-x-8 flex-shrink-0">
-          {/* Connection Status Indicator */}
-          <div className="flex items-center">
-            {state.isConnected ? (
-              <div className="flex items-center gap-2 text-green-600">
-                <Wifi className="w-4 h-4" />
-                <span className="text-xs font-medium hidden sm:inline">🔴 Live</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-red-600">
-                <WifiOff className="w-4 h-4" />
-                <span className="text-xs font-medium hidden sm:inline">⚫ Offline</span>
-              </div>
-            )}
-          </div>
-
           {/* Admin Broadcast Button */}
           {state.currentUser?.role === 'admin' && (
             <button
