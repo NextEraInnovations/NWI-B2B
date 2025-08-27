@@ -1069,7 +1069,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       import.meta.env.VITE_SUPABASE_ANON_KEY !== 'demo-key');
     
     if (!isSupabaseConfigured) {
-      console.warn('Supabase not configured. Changes will only persist in memory.');
+      console.warn('⚠️ Supabase not configured. Changes will only persist in memory.');
       return;
     }
     

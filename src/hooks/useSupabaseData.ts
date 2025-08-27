@@ -337,14 +337,40 @@ export function useSupabaseData() {
 
       // Check if Supabase is properly configured
       if (!isSupabaseConfigured) {
-        console.warn('Supabase not configured. Using local data only.');
+        console.warn('⚠️ Supabase not configured. Using local data only.');
+        console.log('💡 To enable database features:');
+        console.log('1. Create a Supabase project at https://supabase.com');
+        console.log('2. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file');
+        console.log('3. Restart the development server');
         setLoading(false);
+        setIsConnected(false);
         return;
       }
 
-      console.log('Fetching data from Supabase...');
+      console.log('📡 Fetching data from Supabase...');
 
       // Fetch all data in parallel
+      let results;
+      try {
+        results = await Promise.all([
+          supabase.from('users').select('*'),
+          supabase.from('products').select('*'),
+          supabase.from('orders').select('*'),
+          supabase.from('order_items').select('*'),
+          supabase.from('support_tickets').select('*'),
+          supabase.from('promotions').select('*'),
+          supabase.from('return_requests').select('*'),
+          supabase.from('return_items').select('*'),
+          supabase.from('pending_users').select('*').eq('status', 'pending')
+        ]);
+      } catch (fetchError) {
+        console.error('❌ Failed to fetch data from Supabase:', fetchError);
+        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+          throw new Error('Unable to connect to Supabase. Please check your internet connection and Supabase configuration.');
+        }
+        throw fetchError;
+      }
+
       const [
         usersResult,
         productsResult,
@@ -355,26 +381,16 @@ export function useSupabaseData() {
         returnRequestsResult,
         returnItemsResult,
         pendingUsersResult
-      ] = await Promise.all([
-        supabase.from('users').select('*'),
-        supabase.from('products').select('*'),
-        supabase.from('orders').select('*'),
-        supabase.from('order_items').select('*'),
-        supabase.from('support_tickets').select('*'),
-        supabase.from('promotions').select('*'),
-        supabase.from('return_requests').select('*'),
-        supabase.from('return_items').select('*'),
-        supabase.from('pending_users').select('*').eq('status', 'pending')
-      ]);
+      ] = results;
 
       // Check for errors and handle missing tables gracefully
       const handleResult = (result: any, tableName: string) => {
         if (result.error) {
           if (result.error.code === '42P01' || result.error.message?.includes('relation') || result.error.message?.includes('does not exist')) {
-            console.warn(`Table ${tableName} does not exist yet. Please run database migrations.`);
+            console.warn(`⚠️ Table ${tableName} does not exist yet. Please run database migrations.`);
             return [];
           }
-          console.warn(`Error fetching ${tableName}:`, result.error.message);
+          console.warn(`⚠️ Error fetching ${tableName}:`, result.error.message);
           return [];
         }
         return result.data || [];
@@ -391,7 +407,7 @@ export function useSupabaseData() {
       const returnItemsData = handleResult(returnItemsResult, 'return_items');
       const pendingUsersData = handleResult(pendingUsersResult, 'pending_users');
 
-      console.log('Data fetched successfully:', {
+      console.log('✅ Data fetched successfully:', {
         users: usersData.length,
         products: productsData.length,
         orders: ordersData.length,
@@ -423,9 +439,19 @@ export function useSupabaseData() {
 
       setIsConnected(true);
     } catch (err) {
-      console.error('Error fetching data:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while fetching data');
+      console.error('❌ Error fetching data:', err);
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
+      setError(errorMessage);
       setIsConnected(false);
+      
+      // Show user-friendly error message
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Unable to connect')) {
+        console.log('💡 Troubleshooting tips:');
+        console.log('1. Check your internet connection');
+        console.log('2. Verify your Supabase URL and API key in the .env file');
+        console.log('3. Ensure your Supabase project is active');
+        console.log('4. Try refreshing the page');
+      }
     } finally {
       setLoading(false);
     }

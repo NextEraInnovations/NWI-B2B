@@ -3,12 +3,20 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && 
+// Check if Supabase is properly configured with real credentials
+const isSupabaseConfigured = !!(
+  supabaseUrl && 
+  supabaseAnonKey && 
   supabaseUrl !== 'https://demo.supabase.co' && 
-  supabaseAnonKey !== 'demo-key');
+  supabaseAnonKey !== 'demo-key' &&
+  supabaseUrl.includes('supabase.co') &&
+  supabaseUrl.startsWith('https://') &&
+  supabaseAnonKey.length > 20
+);
 
 if (!isSupabaseConfigured) {
-  console.warn('Supabase environment variables not found. Using demo mode.');
+  console.warn('⚠️ Supabase environment variables not properly configured. Using demo mode.');
+  console.log('📝 To connect to Supabase, set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file');
 }
 
 // Create a mock client for demo mode
