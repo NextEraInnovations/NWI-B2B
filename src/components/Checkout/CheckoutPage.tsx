@@ -97,6 +97,65 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const handlePayment = async () => {
     if (!selectedPayment) return;
     
+    // Handle Kazang payment with external link
+    if (selectedPayment === 'kazang') {
+      const kazangUrl = 'https://cdn.kazang.net/pay?value=eyJpIjoiNDUwMyIsImQiOiJQYXkgODA5MTM2MDgxNCIsInAiOlt7IjEiOiI4MDkxMzYwODE0In0seyIyIjpudWxsfSx7IjMiOm51bGx9XX0%3D';
+      
+      // Open Kazang payment in a new window/tab
+      const kazangWindow = window.open(kazangUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      
+      if (!kazangWindow) {
+        alert('Please allow popups for this site to process Kazang payments');
+        return;
+      }
+      
+      // Monitor the payment window
+      const checkClosed = setInterval(() => {
+        if (kazangWindow.closed) {
+          clearInterval(checkClosed);
+          // For now, we'll assume payment was successful if window was closed
+          // In a real implementation, you'd want to verify the payment status
+          const confirmed = confirm('Did you complete the Kazang payment successfully?');
+          if (confirmed) {
+            // Create orders as if payment was successful
+            orderGroups.forEach((orderGroup, index) => {
+              const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
+                productId: product.id,
+                productName: product.name,
+                quantity,
+                price: getDiscountedPrice(product),
+                total: getDiscountedPrice(product) * quantity
+              }));
+
+              const order: Order = {
+                id: `${Date.now()}-${index}`,
+                retailerId: currentUser.id,
+                wholesalerId: orderGroup.wholesaler.id,
+                items: orderItems,
+                total: orderItems.reduce((sum, item) => sum + item.total, 0),
+                status: 'pending',
+                paymentStatus: 'paid',
+                paymentMethod: 'kazang',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              };
+              
+              dispatch({ type: 'ADD_ORDER', payload: order });
+            });
+            
+            setOrderPlaced(true);
+            
+            // Auto-complete after showing success message
+            setTimeout(() => {
+              onOrderComplete();
+            }, 3000);
+          }
+        }
+      }, 1000);
+      
+      return;
+    }
+    
     // Handle PayFast payment with custom integration
     if (selectedPayment === 'payfast') {
       setShowPayFastIntegration(true);
