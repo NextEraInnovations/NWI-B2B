@@ -411,13 +411,13 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
       </div>
 
       {/* Products Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 xl:gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-6 xl:gap-8 auto-rows-fr">
         {filteredProducts.map((product) => (
           <div key={product.id} className={`relative backdrop-blur-sm rounded-2xl xl:rounded-3xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 ${
             isProductOnPromotion(product.id) 
               ? 'bg-gradient-to-br from-yellow-50 via-orange-50 to-red-50 border-orange-300 ring-2 ring-orange-200 shadow-orange-100 animate-pulse' 
               : 'bg-white/80 border-white/20'
-          }`}>
+          } flex flex-col h-full`}>
             {/* Promotion Badge */}
             {isProductOnPromotion(product.id) && (
               <div className="absolute top-3 left-3 z-10">
@@ -434,12 +434,13 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
               className={`w-full h-48 xl:h-56 2xl:h-64 object-cover ${
                 isProductOnPromotion(product.id) ? 'ring-2 ring-orange-200' : ''
               }`}
+              style={{ flexShrink: 0 }}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.src = 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400';
               }}
             />
-            <div className="p-4 xl:p-6 flex flex-col h-full">
+            <div className="p-4 xl:p-6 flex flex-col flex-1 min-h-0">
               <div className="flex items-start justify-between mb-3">
                 <h3 className={`font-bold text-base xl:text-lg line-clamp-2 ${
                   isProductOnPromotion(product.id) ? 'text-orange-900' : 'text-gray-900'
@@ -448,9 +449,9 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                   {product.category}
                 </span>
               </div>
-              <p className="text-gray-600 text-sm xl:text-base mb-4 line-clamp-2">{product.description}</p>
+              <p className="text-gray-600 text-sm xl:text-base mb-4 line-clamp-2 flex-shrink-0">{product.description}</p>
               
-              <div className="space-y-3 mb-6 mt-auto">
+              <div className="space-y-3 mb-4 flex-1 flex flex-col justify-end">
                 <div className="flex justify-between">
                   <span className="text-sm xl:text-base text-gray-500">Price:</span>
                   <div className="text-right">
@@ -476,7 +477,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                 </div>
               </div>
 
-              <div className="border-t pt-4 space-y-4">
+              <div className="border-t pt-4 space-y-4 flex-shrink-0 mt-auto">
                 <div className="flex items-center justify-center gap-3">
                   <button
                     onClick={() => removeFromCart(product.id)}
@@ -500,7 +501,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                 </div>
                 
                 {cart[product.id] > 0 && (
-                  <div className="bg-blue-50 p-3 rounded-lg text-center border border-blue-200">
+                  <div className="bg-blue-50 p-3 rounded-lg text-center border border-blue-200 flex-shrink-0">
                     <p className="text-sm text-blue-600 mb-1">Cart Total</p>
                     <p className="font-bold text-blue-900 text-lg xl:text-xl">
                     R{((cart[product.id] || 0) * getDiscountedPrice(product)).toFixed(0)}
@@ -509,7 +510,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
                 )}
                 
                 {product.stock === 0 && (
-                  <div className="bg-red-50 p-2 rounded-lg text-center border border-red-200">
+                  <div className="bg-red-50 p-2 rounded-lg text-center border border-red-200 flex-shrink-0">
                     <p className="text-sm font-medium text-red-600">Out of Stock</p>
                   </div>
                 )}
