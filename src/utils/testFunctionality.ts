@@ -52,18 +52,47 @@ export class FunctionalityTester {
       
       console.log('🔍 Testing database connection...');
       
-      // Test basic connection
-      const { data, error } = await supabase.from('users').select('count').limit(1);
+      // Test basic connection with timeout
+      const connectionPromise = supabase.from('users').select('count').limit(1);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000)
+      );
+      
+      const { data, error } = await Promise.race([connectionPromise, timeoutPromise]) as any;
       
       if (error) {
-        console.error('❌ Database connection failed:', error.message);
+        if (error.message?.includes('Failed to fetch') || 
+            error.message?.includes('NetworkError')) {
+          console.error('❌ Database connection failed: Network error. Please check:');
+          console.error('  1. Internet connection');
+          console.error('  2. Supabase project is active');
+          console.error('  3. Environment variables are correct');
+          console.error('  4. No firewall blocking *.supabase.co');
+        } else {
+          console.error('❌ Database connection failed:', error.message);
+        }
         return false;
       }
       
       console.log('✅ Database connection successful');
       return true;
     } catch (error) {
-      console.error('❌ Database connection test failed:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || 
+            error.message.includes('NetworkError') ||
+            error.message.includes('timeout')) {
+          console.error('❌ Database connection test failed: Network connectivity issue');
+          console.error('💡 Troubleshooting steps:');
+          console.error('  1. Check internet connection');
+          console.error('  2. Verify Supabase project is active at https://supabase.com/dashboard');
+          console.error('  3. Confirm VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env file');
+          console.error('  4. Ensure no firewall is blocking *.supabase.co domains');
+        } else {
+          console.error('❌ Database connection test failed:', error.message);
+        }
+      } else {
+        console.error('❌ Database connection test failed:', error);
+      }
       return false;
     }
   }

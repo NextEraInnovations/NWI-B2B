@@ -349,6 +349,29 @@ export function useSupabaseData() {
 
       console.log('📡 Fetching data from Supabase...');
 
+      // Test connection first with a simple query
+      try {
+        const connectionTest = await Promise.race([
+          supabase.from('users').select('count').limit(1),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Connection timeout')), 10000)
+          )
+        ]);
+        
+        if (connectionTest.error && connectionTest.error.message?.includes('Failed to fetch')) {
+          throw new Error('Unable to connect to Supabase. Please check your internet connection and Supabase project status.');
+        }
+      } catch (connectionError) {
+        if (connectionError instanceof Error) {
+          if (connectionError.message.includes('Failed to fetch') || 
+              connectionError.message.includes('Connection timeout') ||
+              connectionError.message.includes('NetworkError')) {
+            throw new Error('Unable to connect to Supabase. Please check:\n1. Your internet connection\n2. Supabase project is active\n3. Environment variables are correct\n4. No firewall blocking *.supabase.co');
+          }
+        }
+        throw connectionError;
+      }
+
       // Fetch all data in parallel
       let results;
       try {
@@ -365,8 +388,12 @@ export function useSupabaseData() {
         ]);
       } catch (fetchError) {
         console.error('❌ Failed to fetch data from Supabase:', fetchError);
-        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
-          throw new Error('Unable to connect to Supabase. Please check your internet connection and Supabase configuration.');
+        if (fetchError instanceof Error) {
+          if (fetchError.message.includes('Failed to fetch') || 
+              fetchError.message.includes('NetworkError') ||
+              fetchError.message.includes('fetch')) {
+            throw new Error('Network connection to Supabase failed. Please check:\n1. Internet connectivity\n2. Supabase project status\n3. Firewall settings\n4. Environment variables');
+          }
         }
         throw fetchError;
       }
