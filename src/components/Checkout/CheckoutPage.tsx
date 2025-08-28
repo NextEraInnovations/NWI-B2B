@@ -98,79 +98,6 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
     if (!selectedPayment) return;
     
     // Handle Kazang payment with external link
-    if (selectedPayment === 'kazang') {
-      // Generate Kazang payment link dynamically
-      const payload = {
-        i: `ORDER-${Date.now()}`,                    // Order ID
-        d: "Pay New World Innovation Pty Ltd",      // Description
-        a: finalTotal,                              // Amount (order total)
-        p: [
-          { "1": currentUser.phone || "0123456789" }, // Customer phone
-          { "2": null }, 
-          { "3": null }
-        ]
-      };
-      
-      // Convert to Base64 and encode for URL
-      const encodedValue = btoa(JSON.stringify(payload));
-      const baseUrl = "https://cdn.kazang.net/pay?value=";
-      const kazangUrl = `${baseUrl}${encodeURIComponent(encodedValue)}`;
-      
-      // Open Kazang payment in a new window/tab
-      const kazangWindow = window.open(kazangUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-      
-      if (!kazangWindow) {
-        alert('Please allow popups for this site to process Kazang payments');
-        return;
-      }
-      
-      // Monitor the payment window
-      const checkClosed = setInterval(() => {
-        if (kazangWindow.closed) {
-          clearInterval(checkClosed);
-          // For now, we'll assume payment was successful if window was closed
-          // In a real implementation, you'd want to verify the payment status
-          const confirmed = confirm('Did you complete the Kazang payment successfully?');
-          if (confirmed) {
-            // Create orders as if payment was successful
-            orderGroups.forEach((orderGroup, index) => {
-              const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
-                productId: product.id,
-                productName: product.name,
-                quantity,
-                price: getDiscountedPrice(product),
-                total: getDiscountedPrice(product) * quantity
-              }));
-
-              const order: Order = {
-                id: `${Date.now()}-${index}`,
-                retailerId: currentUser.id,
-                wholesalerId: orderGroup.wholesaler.id,
-                items: orderItems,
-                total: orderItems.reduce((sum, item) => sum + item.total, 0),
-                status: 'pending',
-                paymentStatus: 'paid',
-                paymentMethod: 'kazang',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              };
-              
-              dispatch({ type: 'ADD_ORDER', payload: order });
-            });
-            
-            setOrderPlaced(true);
-            
-            // Auto-complete after showing success message
-            setTimeout(() => {
-              onOrderComplete();
-            }, 3000);
-          }
-        }
-      }, 1000);
-      
-      return;
-    }
-    
     // Handle PayFast payment with custom integration
     if (selectedPayment === 'payfast') {
       setShowPayFastIntegration(true);
@@ -222,6 +149,76 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleKazangPayment = () => {
+    // Generate Kazang payment link dynamically
+    const payload = {
+      i: `ORDER-${Date.now()}`,                    // Order ID
+      d: "Pay New World Innovation Pty Ltd",      // Description
+      p: [
+        { "1": currentUser.phone || "8091360814" }, // Customer phone
+        { "2": null }, 
+        { "3": null }
+      ]
+    };
+    
+    // Convert to Base64 and encode for URL
+    const encodedValue = btoa(JSON.stringify(payload));
+    const baseUrl = "https://cdn.kazang.net/pay?value=";
+    const kazangUrl = `${baseUrl}${encodeURIComponent(encodedValue)}`;
+    
+    // Open Kazang payment in a new window/tab
+    const kazangWindow = window.open(kazangUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    
+    if (!kazangWindow) {
+      alert('Please allow popups for this site to process Kazang payments');
+      return;
+    }
+    
+    // Monitor the payment window
+    const checkClosed = setInterval(() => {
+      if (kazangWindow.closed) {
+        clearInterval(checkClosed);
+        // For now, we'll assume payment was successful if window was closed
+        // In a real implementation, you'd want to verify the payment status
+        const confirmed = confirm('Did you complete the Kazang payment successfully?');
+        if (confirmed) {
+          // Create orders as if payment was successful
+          orderGroups.forEach((orderGroup, index) => {
+            const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
+              productId: product.id,
+              productName: product.name,
+              quantity,
+              price: getDiscountedPrice(product),
+              total: getDiscountedPrice(product) * quantity
+            }));
+
+            const order: Order = {
+              id: `${Date.now()}-${index}`,
+              retailerId: currentUser.id,
+              wholesalerId: orderGroup.wholesaler.id,
+              items: orderItems,
+              total: orderItems.reduce((sum, item) => sum + item.total, 0),
+              status: 'pending',
+              paymentStatus: 'paid',
+              paymentMethod: 'kazang',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            
+            dispatch({ type: 'ADD_ORDER', payload: order });
+          });
+          
+          setOrderPlaced(true);
+          
+          // Auto-complete after showing success message
+          setTimeout(() => {
+            onOrderComplete();
+          }, 3000);
+        }
+      }
+    }, 1000);
   };
 
   const handlePayFastSuccess = (paymentData: any) => {
@@ -581,12 +578,13 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
 
               <button
                 onClick={handlePayment}
-                disabled={!selectedPayment || isProcessing}
+                disabled={(!selectedPayment || isProcessing) && selectedPayment !== 'kazang'}
                 className={`w-full py-4 rounded-xl font-semibold text-white transition-all duration-200 ${
-                  selectedPayment && !isProcessing
+                  selectedPayment && !isProcessing && selectedPayment !== 'kazang'
                     ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                     : 'bg-gray-300 cursor-not-allowed'
                 }`}
+                style={{ display: selectedPayment === 'kazang' ? 'none' : 'block' }}
               >
                 {isProcessing ? (
                   <div className="flex items-center justify-center gap-2">
@@ -597,6 +595,20 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
                   `Pay R${finalTotal.toLocaleString()}`
                 )}
               </button>
+
+              {/* Kazang Pay Me Button */}
+              {selectedPayment === 'kazang' && (
+                <button
+                  onClick={handleKazangPayment}
+                  className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-200 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
+                  style={{ background: '#ff6600', fontSize: '18px', fontWeight: 'bold' }}
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    <Building className="w-6 h-6" />
+                    Pay Me with Kazang - R{finalTotal.toLocaleString()}
+                  </div>
+                </button>
+              )}
 
               <p className="text-xs text-gray-500 text-center mt-3">
                 Your payment is secured with 256-bit SSL encryption
