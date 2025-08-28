@@ -22,14 +22,11 @@ if (!isSupabaseConfigured) {
 // Create a mock client for demo mode
 const createMockClient = () => ({
   from: () => ({
-    select: () => Promise.resolve({ data: [], error: null }),
-    insert: () => Promise.resolve({ data: null, error: null }),
-    update: () => Promise.resolve({ data: null, error: null }),
-    delete: () => Promise.resolve({ error: null }),
-    upsert: () => Promise.resolve({ error: null }),
-    eq: function() { return this; },
-    single: function() { return this; },
-    order: function() { return this; }
+    select: () => createChainableQuery(),
+    insert: () => createChainableQuery(),
+    update: () => createChainableQuery(),
+    delete: () => createChainableQuery(),
+    upsert: () => createChainableQuery()
   }),
   channel: () => ({
     on: function() { return this; },
@@ -37,6 +34,52 @@ const createMockClient = () => ({
   }),
   removeChannel: () => {}
 });
+
+// Create a chainable query object that mimics Supabase's query builder
+const createChainableQuery = () => {
+  const chainable = {
+    eq: function() { return this; },
+    neq: function() { return this; },
+    gt: function() { return this; },
+    gte: function() { return this; },
+    lt: function() { return this; },
+    lte: function() { return this; },
+    like: function() { return this; },
+    ilike: function() { return this; },
+    is: function() { return this; },
+    in: function() { return this; },
+    contains: function() { return this; },
+    containedBy: function() { return this; },
+    rangeGt: function() { return this; },
+    rangeGte: function() { return this; },
+    rangeLt: function() { return this; },
+    rangeLte: function() { return this; },
+    rangeAdjacent: function() { return this; },
+    overlaps: function() { return this; },
+    textSearch: function() { return this; },
+    match: function() { return this; },
+    not: function() { return this; },
+    or: function() { return this; },
+    filter: function() { return this; },
+    order: function() { return this; },
+    limit: function() { return this; },
+    range: function() { return this; },
+    single: function() { return this; },
+    maybeSingle: function() { return this; },
+    csv: function() { return this; },
+    geojson: function() { return this; },
+    explain: function() { return this; },
+    rollback: function() { return this; },
+    returns: function() { return this; },
+    then: function(resolve: Function) {
+      // Make it thenable/awaitable
+      return resolve({ data: [], error: null });
+    },
+    catch: function() { return this; }
+  };
+  
+  return chainable;
+};
 
 export const supabase: SupabaseClient = isSupabaseConfigured 
   ? createClient(supabaseUrl!, supabaseAnonKey!)
