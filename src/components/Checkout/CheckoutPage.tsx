@@ -29,6 +29,8 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showPayFastIntegration, setShowPayFastIntegration] = useState(false);
+  const [kazangQuantity, setKazangQuantity] = useState(1);
+  const [kazangAmount, setKazangAmount] = useState(finalTotal);
 
   const currentUser = state.currentUser!;
 
@@ -74,6 +76,11 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
     return total + (getDiscountedPrice(product) * quantity);
   }, 0);
 
+  // Update Kazang amount when quantity changes
+  useEffect(() => {
+    setKazangAmount(finalTotal * kazangQuantity);
+  }, [finalTotal, kazangQuantity]);
+
   // Group items by wholesaler for separate orders
   const getOrdersByWholesaler = () => {
     const ordersByWholesaler: { [wholesalerId: string]: { items: { product: Product; quantity: number }[], wholesaler: any } } = {};
@@ -93,6 +100,92 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   };
 
   const orderGroups = getOrdersByWholesaler();
+
+  // Custom Kazang payment functions (converted from your JavaScript)
+  const customQuantitiesKazang = (baseAmount: number, quantity: number): number => {
+    return baseAmount * quantity;
+  };
+
+  const actionKazangJavascript = (): boolean => {
+    // Validation logic
+    const shippingValidOrOff = true; // Set your shipping validation logic here
+    const customValid = shippingValidOrOff ? true : false;
+
+    if (!shippingValidOrOff) {
+      return false;
+    }
+    if (!customValid) {
+      return false;
+    }
+
+    // Build Kazang payload dynamically using your structure
+    const orderId = `ORDER-${Date.now()}`;
+    const amount = customQuantitiesKazang(finalTotal, kazangQuantity);
+    const customerPhone = currentUser.phone || "8091360814";
+    const orderDescription = "Pay New World Innovation Pty Ltd";
+
+    const payload = {
+      i: orderId,
+      d: orderDescription,
+      a: amount,
+      p: [{ "1": customerPhone }, { "2": null }, { "3": null }]
+    };
+
+    // Encode payload for Kazang
+    const encodedValue = btoa(JSON.stringify(payload));
+    const finalUrl = `https://cdn.kazang.net/pay?value=${encodeURIComponent(encodedValue)}`;
+
+    // Open Kazang in new tab
+    const kazangWindow = window.open(finalUrl, "_blank");
+    
+    if (!kazangWindow) {
+      alert('Please allow popups for this site to process Kazang payments');
+      return false;
+    }
+
+    // Monitor payment completion
+    const checkClosed = setInterval(() => {
+      if (kazangWindow.closed) {
+        clearInterval(checkClosed);
+        const confirmed = confirm('Did you complete the Kazang payment successfully?');
+        if (confirmed) {
+          // Create orders with the calculated amount
+          orderGroups.forEach((orderGroup, index) => {
+            const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
+              productId: product.id,
+              productName: product.name,
+              quantity,
+              price: getDiscountedPrice(product),
+              total: getDiscountedPrice(product) * quantity
+            }));
+
+            const order: Order = {
+              id: `${Date.now()}-${index}`,
+              retailerId: currentUser.id,
+              wholesalerId: orderGroup.wholesaler.id,
+              items: orderItems,
+              total: amount,
+              status: 'pending',
+              paymentStatus: 'paid',
+              paymentMethod: 'kazang',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            
+            dispatch({ type: 'ADD_ORDER', payload: order });
+          });
+          
+          setOrderPlaced(true);
+          
+          setTimeout(() => {
+            onOrderComplete();
+          }, 3000);
+        }
+      }
+    }, 1000);
+
+    return false; // prevent form submit
+  };
 
   const handlePayment = async () => {
     if (!selectedPayment) return;
@@ -152,73 +245,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   };
 
   const handleKazangPayment = () => {
-    // Generate Kazang payment link dynamically
-    const payload = {
-      i: `ORDER-${Date.now()}`,                    // Order ID
-      d: "Pay New World Innovation Pty Ltd",      // Description
-      p: [
-        { "1": currentUser.phone || "8091360814" }, // Customer phone
-        { "2": null }, 
-        { "3": null }
-      ]
-    };
-    
-    // Convert to Base64 and encode for URL
-    const encodedValue = btoa(JSON.stringify(payload));
-    const baseUrl = "https://cdn.kazang.net/pay?value=";
-    const kazangUrl = `${baseUrl}${encodeURIComponent(encodedValue)}`;
-    
-    // Open Kazang payment in a new window/tab
-    const kazangWindow = window.open(kazangUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-    
-    if (!kazangWindow) {
-      alert('Please allow popups for this site to process Kazang payments');
-      return;
-    }
-    
-    // Monitor the payment window
-    const checkClosed = setInterval(() => {
-      if (kazangWindow.closed) {
-        clearInterval(checkClosed);
-        // For now, we'll assume payment was successful if window was closed
-        // In a real implementation, you'd want to verify the payment status
-        const confirmed = confirm('Did you complete the Kazang payment successfully?');
-        if (confirmed) {
-          // Create orders as if payment was successful
-          orderGroups.forEach((orderGroup, index) => {
-            const orderItems: OrderItem[] = orderGroup.items.map(({ product, quantity }) => ({
-              productId: product.id,
-              productName: product.name,
-              quantity,
-              price: getDiscountedPrice(product),
-              total: getDiscountedPrice(product) * quantity
-            }));
-
-            const order: Order = {
-              id: `${Date.now()}-${index}`,
-              retailerId: currentUser.id,
-              wholesalerId: orderGroup.wholesaler.id,
-              items: orderItems,
-              total: orderItems.reduce((sum, item) => sum + item.total, 0),
-              status: 'pending',
-              paymentStatus: 'paid',
-              paymentMethod: 'kazang',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
-            
-            dispatch({ type: 'ADD_ORDER', payload: order });
-          });
-          
-          setOrderPlaced(true);
-          
-          // Auto-complete after showing success message
-          setTimeout(() => {
-            onOrderComplete();
-          }, 3000);
-        }
-      }
-    }, 1000);
+    actionKazangJavascript();
   };
 
   const handlePayFastSuccess = (paymentData: any) => {
@@ -598,16 +625,39 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
 
               {/* Kazang Pay Me Button */}
               {selectedPayment === 'kazang' && (
-                <button
-                  onClick={handleKazangPayment}
-                  className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-200 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
-                  style={{ background: '#ff6600', fontSize: '18px', fontWeight: 'bold' }}
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    <Building className="w-6 h-6" />
-                    Pay Me with Kazang - R{finalTotal.toLocaleString()}
+                <div className="space-y-4">
+                  {/* Quantity Input */}
+                  <div className="bg-gray-50 p-4 rounded-xl">
+                    <label htmlFor="kazang_quantity" className="block text-sm font-medium text-gray-700 mb-2">
+                      Quantity:
+                    </label>
+                    <input
+                      required
+                      id="kazang_quantity"
+                      type="number"
+                      name="kazang_quantity"
+                      min="1"
+                      value={kazangQuantity}
+                      onChange={(e) => setKazangQuantity(parseInt(e.target.value) || 1)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    />
+                    <p className="text-sm text-gray-600 mt-2">
+                      Amount: R{kazangAmount.toLocaleString()}
+                    </p>
                   </div>
-                </button>
+                  
+                  {/* Kazang Pay Button */}
+                  <button
+                    onClick={handleKazangPayment}
+                    className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
+                    style={{ background: '#ff6600', fontSize: '18px', fontWeight: 'bold' }}
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <Building className="w-6 h-6" />
+                      Pay with Kazang - R{kazangAmount.toLocaleString()}
+                    </div>
+                  </button>
+                </div>
               )}
 
               <p className="text-xs text-gray-500 text-center mt-3">
