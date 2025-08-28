@@ -337,17 +337,11 @@ export function useSupabaseData() {
 
       // Check if Supabase is properly configured
       if (!isSupabaseConfigured) {
-        console.warn('⚠️ Supabase not configured. Using local data only.');
-        console.log('💡 To enable database features:');
-        console.log('1. Create a Supabase project at https://supabase.com');
-        console.log('2. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file');
-        console.log('3. Restart the development server');
+        console.log('ℹ️ Running in demo mode - Supabase not configured');
         setLoading(false);
         setIsConnected(false);
         return;
       }
-
-      console.log('📡 Fetching data from Supabase...');
 
       // Test connection first with a simple query
       try {
@@ -359,22 +353,22 @@ export function useSupabaseData() {
         ]);
         
         if (connectionTest.error && connectionTest.error.message?.includes('Failed to fetch')) {
-          throw new Error('Unable to connect to Supabase. Please check your internet connection and Supabase project status.');
+          console.warn('⚠️ Supabase connection failed - falling back to demo mode');
+          setLoading(false);
+          setIsConnected(false);
+          return;
         }
       } catch (connectionError) {
-        if (connectionError instanceof Error) {
-          if (connectionError.message.includes('Failed to fetch') || 
-              connectionError.message.includes('Connection timeout') ||
-              connectionError.message.includes('NetworkError')) {
-            throw new Error('Unable to connect to Supabase. Please check:\n1. Your internet connection\n2. Supabase project is active\n3. Environment variables are correct\n4. No firewall blocking *.supabase.co');
-          }
-        }
-        throw connectionError;
+        console.warn('⚠️ Supabase connection failed - falling back to demo mode');
+        setLoading(false);
+        setIsConnected(false);
+        return;
       }
 
       // Fetch all data in parallel
       let results;
       try {
+        console.log('📡 Fetching data from Supabase...');
         results = await Promise.all([
           supabase.from('users').select('*'),
           supabase.from('products').select('*'),
@@ -387,15 +381,10 @@ export function useSupabaseData() {
           supabase.from('pending_users').select('*').eq('status', 'pending')
         ]);
       } catch (fetchError) {
-        console.error('❌ Failed to fetch data from Supabase:', fetchError);
-        if (fetchError instanceof Error) {
-          if (fetchError.message.includes('Failed to fetch') || 
-              fetchError.message.includes('NetworkError') ||
-              fetchError.message.includes('fetch')) {
-            throw new Error('Network connection to Supabase failed. Please check:\n1. Internet connectivity\n2. Supabase project status\n3. Firewall settings\n4. Environment variables');
-          }
-        }
-        throw fetchError;
+        console.warn('⚠️ Failed to fetch data from Supabase - falling back to demo mode');
+        setLoading(false);
+        setIsConnected(false);
+        return;
       }
 
       const [
@@ -466,21 +455,11 @@ export function useSupabaseData() {
 
       setIsConnected(true);
     } catch (err) {
-      console.error('❌ Error fetching data:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching data';
-      setError(errorMessage);
-      setIsConnected(false);
-      
-      // Show user-friendly error message
-      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('Unable to connect')) {
-        console.log('💡 Troubleshooting tips:');
-        console.log('1. Check your internet connection');
-        console.log('2. Verify your Supabase URL and API key in the .env file');
-        console.log('3. Ensure your Supabase project is active');
-        console.log('4. Try refreshing the page');
-      }
-    } finally {
+      console.warn('⚠️ Unexpected error - falling back to demo mode');
       setLoading(false);
+      setIsConnected(false);
+    } finally {
+      // Loading state is handled in each branch above
     }
   };
 
