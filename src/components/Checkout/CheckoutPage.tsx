@@ -99,7 +99,22 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
     
     // Handle Kazang payment with external link
     if (selectedPayment === 'kazang') {
-      const kazangUrl = 'https://cdn.kazang.net/pay?value=eyJpIjoiNDUwMyIsImQiOiJQYXkgODA5MTM2MDgxNCIsInAiOlt7IjEiOiI4MDkxMzYwODE0In0seyIyIjpudWxsfSx7IjMiOm51bGx9XX0%3D';
+      // Generate Kazang payment link dynamically
+      const payload = {
+        i: `ORDER-${Date.now()}`,                    // Order ID
+        d: "Pay New World Innovation Pty Ltd",      // Description
+        a: finalTotal,                              // Amount (order total)
+        p: [
+          { "1": currentUser.phone || "0123456789" }, // Customer phone
+          { "2": null }, 
+          { "3": null }
+        ]
+      };
+      
+      // Convert to Base64 and encode for URL
+      const encodedValue = btoa(JSON.stringify(payload));
+      const baseUrl = "https://cdn.kazang.net/pay?value=";
+      const kazangUrl = `${baseUrl}${encodeURIComponent(encodedValue)}`;
       
       // Open Kazang payment in a new window/tab
       const kazangWindow = window.open(kazangUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
