@@ -9,6 +9,7 @@ const isSupabaseConfigured = !!(
   supabaseAnonKey && 
   supabaseUrl !== 'https://demo.supabase.co' && 
   supabaseAnonKey !== 'demo-key' &&
+  supabaseUrl !== 'https://rhiaqoosscwlpwmajbil.supabase.co' &&
   supabaseUrl.includes('supabase.co') &&
   supabaseUrl.startsWith('https://') &&
   supabaseAnonKey.length > 20

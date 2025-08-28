@@ -343,28 +343,6 @@ export function useSupabaseData() {
         return;
       }
 
-      // Test connection first with a simple query
-      try {
-        const connectionTest = await Promise.race([
-          supabase.from('users').select('count').limit(1),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Connection timeout')), 10000)
-          )
-        ]);
-        
-        if (connectionTest.error && connectionTest.error.message?.includes('Failed to fetch')) {
-          console.warn('⚠️ Supabase connection failed - falling back to demo mode');
-          setLoading(false);
-          setIsConnected(false);
-          return;
-        }
-      } catch (connectionError) {
-        console.warn('⚠️ Supabase connection failed - falling back to demo mode');
-        setLoading(false);
-        setIsConnected(false);
-        return;
-      }
-
       // Fetch all data in parallel
       let results;
       try {
