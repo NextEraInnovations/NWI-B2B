@@ -437,8 +437,6 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
               </div>
             )}
             <img 
-              src={product.imageUrl} 
-              alt={product.name}
               src={product.imageUrl || 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400'}
               alt={product.name}
               className={`w-full h-48 xl:h-56 2xl:h-64 object-cover ${
