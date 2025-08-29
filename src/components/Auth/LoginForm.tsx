@@ -18,34 +18,31 @@ export function LoginForm() {
     setError(null);
     
     try {
-      // Try Supabase authentication first
-      const { user, session } = await AuthService.signIn(email, password);
-      
-      if (user && session) {
-        console.log('✅ Authentication successful');
-        // User profile will be loaded by the auth state change listener
-        return;
-      }
-    } catch (authError) {
-      console.log('⚠️ Supabase auth failed, trying demo mode...');
-      
-      // Fallback to demo mode for testing
-      if (email === 'admin@test.com') {
-        const adminUser = state.users.find(u => u.email === email && u.role === 'admin');
-        if (adminUser && password) {
-          dispatch({ type: 'SET_USER', payload: adminUser });
-          return;
-        }
-      }
-      
-      // Check for other demo users
+      // Check for demo users first
       const demoUser = state.users.find(u => u.email === email);
       if (demoUser && password) {
+        console.log('✅ Demo user login successful:', demoUser.name);
         dispatch({ type: 'SET_USER', payload: demoUser });
         return;
       }
       
+      // Try Supabase authentication for real users
+      try {
+        const { user, session } = await AuthService.signIn(email, password);
+        
+        if (user && session) {
+          console.log('✅ Supabase authentication successful');
+          // User profile will be loaded by the auth state change listener
+          return;
+        }
+      } catch (authError) {
+        console.log('⚠️ Supabase auth failed');
+      }
+      
       setError('Invalid email or password');
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -149,8 +146,41 @@ export function LoginForm() {
         </form>
 
 
-        {/* Registration Option */}
+        {/* Demo User Quick Login */}
         <div className="mt-6 sm:mt-8 lg:mt-10 border-t pt-6">
+          <div className="text-center mb-4">
+            <p className="text-sm text-gray-600 mb-4">Demo Users (for testing):</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={() => quickLogin('admin@test.com')}
+                className="bg-purple-50 text-purple-600 px-3 py-2 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
+              >
+                Admin Login
+              </button>
+              <button
+                onClick={() => quickLogin('wholesaler@test.com')}
+                className="bg-green-50 text-green-600 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
+              >
+                Wholesaler Login
+              </button>
+              <button
+                onClick={() => quickLogin('retailer@test.com')}
+                className="bg-orange-50 text-orange-600 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
+              >
+                Retailer Login
+              </button>
+              <button
+                onClick={() => quickLogin('support@test.com')}
+                className="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+              >
+                Support Login
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Registration Option */}
+        <div className="mt-6 border-t pt-6">
           <div className="text-center">
             <p className="text-sm text-gray-600 mb-4">Don't have an account?</p>
             <button
