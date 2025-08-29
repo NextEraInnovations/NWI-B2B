@@ -5,8 +5,8 @@ A comprehensive B2B wholesale-to-retail platform built with React, TypeScript, a
 ## 🚀 Features
 
 ### For Retailers
-- **Product Browsing**: Browse products from multiple wholesalers
-- **Smart Cart**: Persistent shopping cart with promotion calculations
+- **Product Browsing**: Browse products from multiple wholesalers with real-time promotions
+- **Smart Cart**: Persistent shopping cart with automatic promotion calculations
 - **Multiple Payment Methods**: PayFast, Kazang, and Shop2Shop integration
 - **Order Management**: Track orders from placement to completion
 - **Support System**: Create and manage support tickets
@@ -41,7 +41,7 @@ A comprehensive B2B wholesale-to-retail platform built with React, TypeScript, a
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/yourusername/nwi-b2b-platform.git
    cd nwi-b2b-platform
    ```
 
@@ -82,10 +82,10 @@ The platform uses a comprehensive PostgreSQL schema with the following main tabl
 
 ## 🔐 Authentication & Security
 
-- **Supabase Auth**: Secure user authentication
+- **Supabase Auth**: Secure user authentication with session persistence
 - **Row Level Security**: Database-level access control
 - **Role-based Access**: Different permissions for each user type
-- **Session Management**: Persistent login sessions
+- **Session Management**: Persistent login sessions across browser restarts
 
 ## 💳 Payment Integration
 
@@ -98,10 +98,18 @@ The platform uses a comprehensive PostgreSQL schema with the following main tabl
 - Official Kazang payment gateway integration
 - Vendor Cash Deposit (Product ID: 4503)
 - Real-time payment status monitoring
+- Popup-based payment flow
 
 ### Shop2Shop
 - Mobile payment solution integration
 - SMS-based payment confirmations
+
+## 💾 Data Persistence
+
+- **User Sessions**: Automatic login persistence across browser sessions
+- **Shopping Cart**: Cart data persists locally and restores on return
+- **Real-time Sync**: All data automatically syncs with Supabase database
+- **Offline Support**: Local storage fallback for offline functionality
 
 ## 🚀 Deployment
 
@@ -128,10 +136,10 @@ The platform includes PWA features:
 
 ## 🔄 Real-time Features
 
-- **Live Updates**: Real-time data synchronization
+- **Live Updates**: Real-time data synchronization via Supabase
 - **Push Notifications**: Instant alerts for important events
-- **Live Chat**: Real-time customer support
-- **Order Tracking**: Live order status updates
+- **Live Order Tracking**: Real-time order status updates
+- **Inventory Updates**: Live stock level updates
 
 ## 🧪 Testing
 
