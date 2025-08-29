@@ -146,38 +146,6 @@ export function LoginForm() {
         </form>
 
 
-        {/* Demo User Quick Login */}
-        <div className="mt-6 sm:mt-8 lg:mt-10 border-t pt-6">
-          <div className="text-center mb-4">
-            <p className="text-sm text-gray-600 mb-4">Demo Users (for testing):</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                onClick={() => quickLogin('admin@test.com')}
-                className="bg-purple-50 text-purple-600 px-3 py-2 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium"
-              >
-                Admin Login
-              </button>
-              <button
-                onClick={() => quickLogin('wholesaler@test.com')}
-                className="bg-green-50 text-green-600 px-3 py-2 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
-              >
-                Wholesaler Login
-              </button>
-              <button
-                onClick={() => quickLogin('retailer@test.com')}
-                className="bg-orange-50 text-orange-600 px-3 py-2 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
-              >
-                Retailer Login
-              </button>
-              <button
-                onClick={() => quickLogin('support@test.com')}
-                className="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-              >
-                Support Login
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Registration Option */}
         <div className="mt-6 border-t pt-6">
