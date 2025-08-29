@@ -84,8 +84,22 @@ export function LoginForm() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-6 lg:p-8 w-full max-w-sm sm:max-w-md">
         <div className="text-center mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg">
-            <User className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+          <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg overflow-hidden">
+            <img 
+              src="/logo.png" 
+              alt="NWI B2B Logo" 
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                // Fallback to gradient background with text if image fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.className = "bg-gradient-to-r from-blue-600 to-indigo-600 w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg";
+                  parent.innerHTML = '<span class="text-white font-bold text-lg sm:text-xl lg:text-2xl">N</span>';
+                }
+              }}
+            />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NWI B2B</h1>
           <p className="text-gray-600 mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg font-bold">NEW WORLD INNOVATIONS</p>
