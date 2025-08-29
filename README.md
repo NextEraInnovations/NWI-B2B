@@ -1,108 +1,182 @@
-# demo-
+# NWI B2B Platform
 
-[Edit in StackBlitz next generation editor ⚡️](https://stackblitz.com/~/github.com/NextEraInnovations/demo-)
+A comprehensive B2B wholesale-to-retail platform built with React, TypeScript, and Supabase.
 
-## PayFast Integration Setup
+## 🚀 Features
 
-This application includes a custom PayFast payment integration. To set up PayFast payments:
+### For Retailers
+- **Product Browsing**: Browse products from multiple wholesalers
+- **Smart Cart**: Persistent shopping cart with promotion calculations
+- **Multiple Payment Methods**: PayFast, Kazang, and Shop2Shop integration
+- **Order Management**: Track orders from placement to completion
+- **Support System**: Create and manage support tickets
 
-### 1. Configure PayFast Credentials
+### For Wholesalers
+- **Product Management**: Add, edit, and manage product inventory
+- **Order Processing**: Accept and fulfill retailer orders
+- **Promotions**: Create and manage promotional campaigns
+- **Analytics**: Track sales performance and customer metrics
 
-Edit `src/components/Payment/PayFastIntegration.tsx` and update the `PAYFAST_CONFIG` object:
+### For Administrators
+- **User Management**: Approve/reject user registrations
+- **Platform Oversight**: Monitor all orders, products, and users
+- **Analytics Dashboard**: Comprehensive platform analytics
+- **Settings Management**: Configure platform-wide settings
 
-```typescript
-const PAYFAST_CONFIG = {
-  merchant_id: 'YOUR_MERCHANT_ID',     // Replace with your PayFast merchant ID
-  merchant_key: 'YOUR_MERCHANT_KEY',   // Replace with your PayFast merchant key
-  passphrase: 'YOUR_PASSPHRASE',       // Replace with your PayFast passphrase (optional)
-  sandbox: true,                       // Set to false for production
-  return_url: `${window.location.origin}/payment/success`,
-  cancel_url: `${window.location.origin}/payment/cancel`,
-  notify_url: `${window.location.origin}/api/payfast/notify`,
-};
+### For Support Staff
+- **Ticket Management**: Handle customer support requests
+- **Return Processing**: Manage product returns and refunds
+- **User Assistance**: Help users with platform issues
+
+## 🛠 Technology Stack
+
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **Payments**: PayFast, Kazang, Shop2Shop
+- **State Management**: React Context API
+- **Build Tool**: Vite
+- **Deployment**: Netlify ready
+
+## 📦 Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd nwi-b2b-platform
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Set up Supabase database**
+   - Create a new Supabase project
+   - Run the migration files in `supabase/migrations/`
+   - Enable Row Level Security (RLS) on all tables
+
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+## 🗄 Database Schema
+
+The platform uses a comprehensive PostgreSQL schema with the following main tables:
+
+- **users**: User accounts and profiles
+- **pending_users**: User registration applications
+- **products**: Product catalog
+- **orders** & **order_items**: Order management
+- **support_tickets**: Customer support system
+- **promotions**: Marketing campaigns
+- **return_requests** & **return_items**: Return management
+- **platform_settings**: System configuration
+
+## 🔐 Authentication & Security
+
+- **Supabase Auth**: Secure user authentication
+- **Row Level Security**: Database-level access control
+- **Role-based Access**: Different permissions for each user type
+- **Session Management**: Persistent login sessions
+
+## 💳 Payment Integration
+
+### PayFast
+- Custom integration with form-based payments
+- Signature validation and webhook handling
+- Support for custom quantities and amounts
+
+### Kazang
+- Official Kazang payment gateway integration
+- Vendor Cash Deposit (Product ID: 4503)
+- Real-time payment status monitoring
+
+### Shop2Shop
+- Mobile payment solution integration
+- SMS-based payment confirmations
+
+## 🚀 Deployment
+
+### Netlify (Recommended)
+1. Connect your GitHub repository to Netlify
+2. Set build command: `npm run build`
+3. Set publish directory: `dist`
+4. Add environment variables in Netlify dashboard
+5. Deploy!
+
+### Manual Deployment
+```bash
+npm run build
+# Upload dist/ folder to your hosting provider
 ```
 
-### 2. Implement Signature Generation
+## 📱 Progressive Web App (PWA)
 
-The PayFast integration requires proper signature generation. Update the `generateSignature` function in `PayFastIntegration.tsx`:
+The platform includes PWA features:
+- Service Worker for offline functionality
+- Push notifications for real-time updates
+- App-like experience on mobile devices
+- Installable on desktop and mobile
 
-```typescript
-const generateSignature = (data: any) => {
-  // Implement PayFast signature generation according to their documentation
-  // See: https://developers.payfast.co.za/docs#signature_generation
-  
-  const queryString = Object.keys(data)
-    .filter(key => data[key] !== '' && data[key] !== null)
-    .sort()
-    .map(key => `${key}=${encodeURIComponent(data[key])}`)
-    .join('&');
-  
-  const stringToHash = PAYFAST_CONFIG.passphrase 
-    ? `${queryString}&passphrase=${PAYFAST_CONFIG.passphrase}`
-    : queryString;
-  
-  // Generate MD5 hash using crypto library
-  return crypto.createHash('md5').update(stringToHash).digest('hex');
-};
+## 🔄 Real-time Features
+
+- **Live Updates**: Real-time data synchronization
+- **Push Notifications**: Instant alerts for important events
+- **Live Chat**: Real-time customer support
+- **Order Tracking**: Live order status updates
+
+## 🧪 Testing
+
+```bash
+# Run tests (when implemented)
+npm test
+
+# Run linting
+npm run lint
+
+# Type checking
+npx tsc --noEmit
 ```
 
-### 3. Set Up Webhook Endpoint
+## 📊 Analytics & Monitoring
 
-Create a webhook endpoint to handle PayFast notifications. Example using Express.js:
+- **User Analytics**: Track user behavior and engagement
+- **Sales Analytics**: Monitor revenue and order patterns
+- **Performance Monitoring**: Track app performance metrics
+- **Error Tracking**: Monitor and fix issues quickly
 
-```javascript
-app.post('/api/payfast/notify', express.raw({ type: 'application/x-www-form-urlencoded' }), async (req, res) => {
-  try {
-    const webhookData = new URLSearchParams(req.body.toString());
-    const data = Object.fromEntries(webhookData.entries());
-    
-    // Process the webhook using the provided PayFastWebhookHandler
-    const result = await PayFastWebhookHandler.processWebhook(data);
-    
-    if (result.success) {
-      res.status(200).send('OK');
-    } else {
-      res.status(400).send(result.error);
-    }
-  } catch (error) {
-    res.status(500).send('Internal Server Error');
-  }
-});
-```
+## 🤝 Contributing
 
-### 4. Customize Payment Flow
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-You can customize the payment flow in three ways:
+## 📄 License
 
-1. **Direct Form Submission** (default): Redirects user to PayFast
-2. **API Integration**: Call your backend API to handle PayFast
-3. **Custom Flow**: Implement your own payment processing logic
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Update the `initiatePayFastPayment` function in `PayFastIntegration.tsx` to use your preferred method.
+## 🆘 Support
 
-### 5. Handle Payment Responses
+For support, email support@nwi-b2b.com or create an issue in this repository.
 
-The integration includes handlers for:
-- Payment success
-- Payment failure
-- Payment cancellation
-- Webhook notifications
+## 🙏 Acknowledgments
 
-Customize these handlers in `PayFastWebhookHandler.tsx` to match your business logic.
+- **Supabase** for the backend infrastructure
+- **PayFast** for payment processing
+- **Kazang** for mobile payments
+- **Tailwind CSS** for the design system
+- **React** team for the amazing framework
 
-### 6. Testing
+---
 
-- Use sandbox mode for testing (`sandbox: true`)
-- PayFast provides test card numbers for sandbox testing
-- Monitor console logs for payment flow debugging
-
-### 7. Production Deployment
-
-Before going live:
-- Set `sandbox: false` in the configuration
-- Update all URLs to production endpoints
-- Implement proper error handling and logging
-- Set up monitoring for webhook endpoints
-- Test with real PayFast credentials
-
-For more information, refer to the [PayFast Developer Documentation](https://developers.payfast.co.za/).
+Built with ❤️ by New World Innovations
