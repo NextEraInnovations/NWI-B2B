@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -30,7 +31,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showPayFastIntegration, setShowPayFastIntegration] = useState(false);
   const [kazangQuantity, setKazangQuantity] = useState(1);
-  const [kazangAmount, setKazangAmount] = useState(finalTotal);
+  const [kazangAmount, setKazangAmount] = useState(0);
 
   const currentUser = state.currentUser!;
 
