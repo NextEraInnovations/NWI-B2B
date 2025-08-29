@@ -27,6 +27,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Product, Order, OrderItem, SupportTicket } from '../../types';
 import { CheckoutPage } from '../Checkout/CheckoutPage';
+import { LocalStorageService } from '../../utils/localStorage';
 
 interface RetailerDashboardProps {
   activeTab: string;
@@ -34,13 +35,21 @@ interface RetailerDashboardProps {
 
 export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
   const { state, dispatch } = useApp();
-  const [cart, setCart] = useState<{ [productId: string]: number }>({});
+  const [cart, setCart] = useState<{ [productId: string]: number }>(() => {
+    // Load cart from localStorage on component mount
+    return LocalStorageService.getCartData();
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newTicket, setNewTicket] = useState({ subject: '', description: '', priority: 'medium' as const });
   const [showCheckout, setShowCheckout] = useState(false);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    LocalStorageService.saveCartData(cart);
+  }, [cart]);
 
   // Real-time updates listener
   useEffect(() => {
@@ -180,6 +189,7 @@ export function RetailerDashboard({ activeTab }: RetailerDashboardProps) {
 
   const handleCheckoutComplete = () => {
     setCart({});
+    LocalStorageService.clearCartData();
     setShowCheckout(false);
   };
 

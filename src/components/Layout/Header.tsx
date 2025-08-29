@@ -2,6 +2,7 @@ import React from 'react';
 import { useState, useCallback } from 'react';
 import { Bell, LogOut, User, Menu, X, Settings, Trash2, CheckCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { AuthService } from '../../services/authService';
 import { NotificationService } from '../../services/notificationService';
 
 interface HeaderProps {
@@ -14,8 +15,15 @@ export function Header({ onMobileMenuToggle, isMobileSidebarOpen }: HeaderProps)
   const [showNotifications, setShowNotifications] = useState(false);
   const [readNotifications, setReadNotifications] = useState<Set<string>>(new Set());
 
-  const handleLogout = () => {
-    dispatch({ type: 'SET_USER', payload: null });
+  const handleLogout = async () => {
+    try {
+      await AuthService.signOut();
+      dispatch({ type: 'SET_USER', payload: null });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force logout even if there's an error
+      dispatch({ type: 'SET_USER', payload: null });
+    }
   };
 
   const getNotifications = () => {

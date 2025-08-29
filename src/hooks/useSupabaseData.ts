@@ -535,13 +535,13 @@ export function useSupabaseData() {
 
     const checkConnection = async () => {
       try {
-        const result = await Promise.race([
+        await Promise.race([
           supabase.from('users').select('count').limit(1),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Connection timeout')), 5000)
           )
-        ]);
-        setIsConnected(!result.error);
+        ]) as any;
+        setIsConnected(true);
       } catch (err) {
         // Silently handle connection failures
         setIsConnected(false);
@@ -550,7 +550,8 @@ export function useSupabaseData() {
 
     // Check connection every 30 seconds
     const connectionInterval = setInterval(checkConnection, 30000);
-    // Skip initial check to avoid immediate error on startup
+    // Initial connection check
+    checkConnection();
 
     return () => clearInterval(connectionInterval);
   }, []);

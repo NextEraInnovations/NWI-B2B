@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { useEffect } from 'react';
 import { useSupabaseData } from '../hooks/useSupabaseData';
 import { SupabaseService } from '../services/supabaseService';
+import { AuthService } from '../services/authService';
 import { User, Product, Order, SupportTicket, Promotion, Analytics, ReturnRequest, PendingUser, WholesalerAnalytics, Notification } from '../types';
 import { NotificationService } from '../services/notificationService';
 
@@ -21,6 +22,7 @@ interface PlatformSettings {
 
 interface AppState {
   currentUser: User | null;
+  authChecked: boolean;
   users: User[];
   pendingUsers: PendingUser[];
   products: Product[];
@@ -50,6 +52,8 @@ interface AppState {
 
 type AppAction = 
   | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_AUTH_CHECKED'; payload: boolean }
   | { type: 'ADD_USER'; payload: User }
   | { type: 'SET_INITIAL_DATA'; payload: { users: User[]; products: Product[]; orders: Order[]; tickets: SupportTicket[]; promotions: Promotion[]; returnRequests: ReturnRequest[]; pendingUsers: PendingUser[] } }
   | { type: 'ADD_PENDING_USER'; payload: PendingUser }
@@ -84,6 +88,7 @@ type AppAction =
 
 const initialState: AppState = {
   currentUser: null,
+  authChecked: false,
   users: [
     {
       id: '00000000-0000-0000-0000-000000000001',
@@ -203,6 +208,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'SET_USER':
       return { ...state, currentUser: action.payload };
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    case 'SET_AUTH_CHECKED':
+      return { ...state, authChecked: action.payload };
     case 'SET_INITIAL_DATA':
       return {
         ...state,
@@ -1027,6 +1036,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refetchUsers,
     refetchPendingUsers
   } = useSupabaseData();
+
+  // Check for existing authentication session on app load
+  useEffect(() => {
+    const checkAuthSession = async () => {
+      try {
+        console.log('🔍 Checking for existing authentication session...');
+        
+        const session = await AuthService.getCurrentSession();
+        if (session?.user) {
+          console.log('✅ Found existing session for user:', session.user.email);
+          
+          // Get user profile from database
+          const userProfile = await AuthService.getUserProfile(session.user.id);
+          if (userProfile) {
+            console.log('✅ User profile loaded:', userProfile.name);
+            dispatch({ type: 'SET_USER', payload: userProfile });
+          } else {
+            // Create user profile if it doesn't exist
+            console.log('📝 Creating user profile from auth data...');
+            const newProfile = await AuthService.upsertUserProfile(session.user);
+            dispatch({ type: 'SET_USER', payload: newProfile });
+          }
+        } else {
+          console.log('ℹ️ No existing session found');
+        }
+      } catch (error) {
+        console.error('❌ Error checking auth session:', error);
+      } finally {
+        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+      }
+    };
+
+    checkAuthSession();
+  }, []);
+
+  // Listen for auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = AuthService.onAuthStateChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('✅ User signed in:', session.user.email);
+        
+        // Get or create user profile
+        let userProfile = await AuthService.getUserProfile(session.user.id);
+        if (!userProfile) {
+          userProfile = await AuthService.upsertUserProfile(session.user);
+        }
+        
+        dispatch({ type: 'SET_USER', payload: userProfile });
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 User signed out');
+        dispatch({ type: 'SET_USER', payload: null });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Update state with real data from Supabase when it loads
   useEffect(() => {

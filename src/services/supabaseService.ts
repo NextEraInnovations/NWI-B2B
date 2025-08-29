@@ -33,7 +33,7 @@ export class SupabaseService {
     const { data, error } = await supabase
       .from('users')
       .insert([{
-        id: uuidv4(),
+        id: user.id || uuidv4(),
         name: user.name,
         email: user.email,
         role: user.role,

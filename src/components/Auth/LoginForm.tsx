@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, LogIn, UserPlus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { AuthService } from '../../services/authService';
 import { UserRegistrationForm } from '../UserManagement/UserRegistrationForm';
 
 export function LoginForm() {
@@ -8,25 +9,56 @@ export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showRegistration, setShowRegistration] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
     
-    // Check for admin login
-    if (email === 'admin@test.com') {
-      const adminUser = state.users.find(u => u.email === email && u.role === 'admin');
-      if (adminUser && password) { // Admin can use any password as long as one is provided
-        dispatch({ type: 'SET_USER', payload: adminUser });
+    try {
+      // Try Supabase authentication first
+      const { user, session } = await AuthService.signIn(email, password);
+      
+      if (user && session) {
+        console.log('✅ Authentication successful');
+        // User profile will be loaded by the auth state change listener
         return;
       }
+    } catch (authError) {
+      console.log('⚠️ Supabase auth failed, trying demo mode...');
+      
+      // Fallback to demo mode for testing
+      if (email === 'admin@test.com') {
+        const adminUser = state.users.find(u => u.email === email && u.role === 'admin');
+        if (adminUser && password) {
+          dispatch({ type: 'SET_USER', payload: adminUser });
+          return;
+        }
+      }
+      
+      // Check for other demo users
+      const demoUser = state.users.find(u => u.email === email);
+      if (demoUser && password) {
+        dispatch({ type: 'SET_USER', payload: demoUser });
+        return;
+      }
+      
+      setError('Invalid email or password');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Check for other users (you can add password validation here later)
-    const user = state.users.find(u => u.email === email && u.role !== 'admin');
-    if (user && password) { // Basic password check - you should implement proper authentication
-      dispatch({ type: 'SET_USER', payload: user });
-    } else {
-      alert('Invalid email or password');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AuthService.signOut();
+      dispatch({ type: 'SET_USER', payload: null });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force logout even if there's an error
+      dispatch({ type: 'SET_USER', payload: null });
     }
   };
 
@@ -36,6 +68,20 @@ export function LoginForm() {
       dispatch({ type: 'SET_USER', payload: user });
     }
   };
+
+  // Show loading spinner while checking authentication
+  if (!state.authChecked) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-gray-600">Loading your session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-3 sm:p-4">
@@ -47,6 +93,12 @@ export function LoginForm() {
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NWI B2B</h1>
           <p className="text-gray-600 mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg font-bold">NEW WORLD INNOVATIONS</p>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleLogin} className="space-y-4 sm:space-y-6 lg:space-y-8">
           <div>
@@ -79,10 +131,20 @@ export function LoginForm() {
 
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 lg:py-4 rounded-lg sm:rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm lg:text-base"
           >
-            <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
-            Sign In
+            {isLoading ? (
+              <>
+                <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Signing In...
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
+                Sign In
+              </>
+            )}
           </button>
         </form>
 
