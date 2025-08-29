@@ -29,8 +29,12 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [showPayFastIntegration, setShowPayFastIntegration] = useState(false);
-  const [kazangQuantity, setKazangQuantity] = useState(1);
-  const [kazangAmount, setKazangAmount] = useState(0);
+  const [kazangFormData, setKazangFormData] = useState({
+    quantity: 1,
+    orderId: `ORDER-${Date.now()}`,
+    customerReference: '',
+    paymentReference: ''
+  });
 
   const currentUser = state.currentUser!;
 
@@ -76,10 +80,14 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
     return total + (getDiscountedPrice(product) * quantity);
   }, 0);
 
-  // Update Kazang amount when quantity changes
+  // Initialize Kazang form data
   useEffect(() => {
-    setKazangAmount(finalTotal * kazangQuantity);
-  }, [finalTotal, kazangQuantity]);
+    setKazangFormData(prev => ({
+      ...prev,
+      customerReference: currentUser.phone || currentUser.email,
+      paymentReference: `NWI-${Date.now()}`
+    }));
+  }, [currentUser]);
 
   // Group items by wholesaler for separate orders
   const getOrdersByWholesaler = () => {
@@ -101,41 +109,51 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
 
   const orderGroups = getOrdersByWholesaler();
 
-  // Custom Kazang payment functions (converted from your JavaScript)
-  const customQuantitiesKazang = (baseAmount: number, quantity: number): number => {
-    return baseAmount * quantity;
+  // Kazang payment functions (integrated from your official code)
+  const customQuantitiesKazang = (formData: any): boolean => {
+    // Calculate total amount based on quantity
+    const baseAmount = finalTotal;
+    const quantity = formData.quantity;
+    formData.calculatedAmount = baseAmount * quantity;
+    return true;
   };
 
-  const actionKazangJavascript = (): boolean => {
-    // Validation logic
+  const actionKazangJavascript = (formData: any): boolean => {
+    // Validation logic from your official code
     const shippingValidOrOff = true; // Set your shipping validation logic here
-    const customValid = shippingValidOrOff ? true : false;
+    const customValid = shippingValidOrOff ? customQuantitiesKazang(formData) : false;
 
     if (!shippingValidOrOff) {
+      return false;
+    }
+    if (typeof customValid !== 'undefined' && !customValid) {
       return false;
     }
     if (!customValid) {
       return false;
     }
 
-    // Build Kazang payload dynamically using your structure
-    const orderId = `ORDER-${Date.now()}`;
-    const amount = customQuantitiesKazang(finalTotal, kazangQuantity);
-    const customerPhone = currentUser.phone || "8091360814";
-    const orderDescription = "Pay New World Innovation Pty Ltd";
+    // Build Kazang payload using official structure
+    const orderId = formData.orderId;
+    const amount = formData.calculatedAmount;
+    const customerReference = formData.customerReference;
+    const paymentReference = formData.paymentReference;
 
     const payload = {
-      i: orderId,
-      d: orderDescription,
-      a: amount,
-      p: [{ "1": customerPhone }, { "2": null }, { "3": null }]
+      d: `Pay ${customerReference}`,    // Description shown to user
+      i: 4503,                          // Product ID (Vendor Cash Deposit as per doc)
+      p: [
+        { "1": customerReference },     // Kazang Account Number or unique ref
+        { "2": amount },                // Amount goes in parameter 2
+        { "3": paymentReference }       // Optional payment reference
+      ]
     };
 
     // Encode payload for Kazang
     const encodedValue = btoa(JSON.stringify(payload));
     const finalUrl = `https://cdn.kazang.net/pay?value=${encodeURIComponent(encodedValue)}`;
 
-    // Open Kazang in new tab
+    // Redirect user to Kazang payment page
     const kazangWindow = window.open(finalUrl, "_blank");
     
     if (!kazangWindow) {
@@ -164,7 +182,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
               retailerId: currentUser.id,
               wholesalerId: orderGroup.wholesaler.id,
               items: orderItems,
-              total: amount,
+              total: formData.calculatedAmount,
               status: 'pending',
               paymentStatus: 'paid',
               paymentMethod: 'kazang',
@@ -184,7 +202,7 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
       }
     }, 1000);
 
-    return false; // prevent form submit
+    return false; // prevent form submission
   };
 
   const handlePayment = async () => {
@@ -245,7 +263,15 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
   };
 
   const handleKazangPayment = () => {
-    actionKazangJavascript();
+    // Prepare form data for Kazang processing
+    const formData = {
+      orderId: kazangFormData.orderId,
+      quantity: kazangFormData.quantity,
+      customerReference: kazangFormData.customerReference,
+      paymentReference: kazangFormData.paymentReference
+    };
+    
+    actionKazangJavascript(formData);
   };
 
   const handlePayFastSuccess = (paymentData: any) => {
@@ -626,37 +652,98 @@ export function CheckoutPage({ cart, onBack, onOrderComplete }: CheckoutPageProp
               {/* Kazang Pay Me Button */}
               {selectedPayment === 'kazang' && (
                 <div className="space-y-4">
-                  {/* Quantity Input */}
+                  {/* Kazang Form Fields */}
                   <div className="bg-gray-50 p-4 rounded-xl">
-                    <label htmlFor="kazang_quantity" className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="kazang_quantity" className="block text-sm font-medium text-gray-700 mb-2">
+                          Quantity:
+                        </label>
+                        <input
+                          required
+                          id="kazang_quantity"
+                          type="number"
+                          name="custom_quantity"
+                          min="1"
+                          value={kazangFormData.quantity}
+                          onChange={(e) => setKazangFormData(prev => ({
+                            ...prev,
+                            quantity: parseInt(e.target.value) || 1
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="customer_reference" className="block text-sm font-medium text-gray-700 mb-2">
+                          Customer Reference:
+                        </label>
+                        <input
+                          required
+                          id="customer_reference"
+                          type="text"
+                          value={kazangFormData.customerReference}
+                          onChange={(e) => setKazangFormData(prev => ({
+                            ...prev,
+                            customerReference: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          placeholder="Phone number or account reference"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="payment_reference" className="block text-sm font-medium text-gray-700 mb-2">
+                          Payment Reference:
+                        </label>
+                        <input
+                          id="payment_reference"
+                          type="text"
+                          value={kazangFormData.paymentReference}
+                          onChange={(e) => setKazangFormData(prev => ({
+                            ...prev,
+                            paymentReference: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          placeholder="Optional payment reference"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      <p className="text-sm text-orange-700 mb-1">
+                        <strong>Total Amount:</strong> R{(finalTotal * kazangFormData.quantity).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-orange-600">
                       Quantity:
-                    </label>
-                    <input
-                      required
-                      id="kazang_quantity"
-                      type="number"
-                      name="kazang_quantity"
-                      min="1"
-                      value={kazangQuantity}
-                      onChange={(e) => setKazangQuantity(parseInt(e.target.value) || 1)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
-                    <p className="text-sm text-gray-600 mt-2">
-                      Amount: R{kazangAmount.toLocaleString()}
+                        Base amount (R{finalTotal.toLocaleString()}) × {kazangFormData.quantity} = R{(finalTotal * kazangFormData.quantity).toLocaleString()}
                     </p>
+                    </div>
                   </div>
                   
-                  {/* Kazang Pay Button */}
+                  {/* Official Kazang Pay Button */}
                   <button
+                    type="button"
                     onClick={handleKazangPayment}
-                    className="w-full py-4 rounded-xl font-semibold text-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
-                    style={{ background: '#ff6600', fontSize: '18px', fontWeight: 'bold' }}
+                    className="w-full py-4 rounded-xl font-bold text-white transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:scale-95"
+                    style={{ 
+                      background: '#ff6600', 
+                      fontSize: '18px', 
+                      fontWeight: 'bold',
+                      border: 'none'
+                    }}
                   >
                     <div className="flex items-center justify-center gap-3">
                       <Building className="w-6 h-6" />
-                      Pay with Kazang - R{kazangAmount.toLocaleString()}
+                      Pay with Kazang - R{(finalTotal * kazangFormData.quantity).toLocaleString()}
                     </div>
                   </button>
+                  
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500">
+                      You will be redirected to Kazang's secure payment portal
+                    </p>
+                  </div>
                 </div>
               )}
 
