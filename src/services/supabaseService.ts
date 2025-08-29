@@ -128,7 +128,12 @@ export class SupabaseService {
   static async updateProduct(id: string, updates: Partial<Product>) {
     if (!isSupabaseConfigured) {
       console.warn('⚠️ Supabase not configured. Product update skipped.');
-      return { ...updates, id, updatedAt: new Date().toISOString() } as Product;
+      return { 
+        ...updates, 
+        id, 
+        imageUrl: updates.imageUrl || 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400',
+        updatedAt: new Date().toISOString() 
+      } as Product;
     }
 
     console.log('💾 Updating product in database:', updates.name || id);
@@ -142,7 +147,7 @@ export class SupabaseService {
         stock: updates.stock,
         min_order_quantity: updates.minOrderQuantity,
         category: updates.category,
-        image_url: updates.imageUrl,
+        image_url: updates.imageUrl || 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400',
         available: updates.available
       })
       .eq('id', id)

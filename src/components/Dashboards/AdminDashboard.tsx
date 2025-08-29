@@ -1066,7 +1066,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         {state.products.map((product) => (
           <div key={product.id} className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-300">
             <img 
-              src={product.imageUrl} 
+              src={product.imageUrl || 'https://images.pexels.com/photos/3965545/pexels-photo-3965545.jpeg?auto=compress&cs=tinysrgb&w=400'} 
               alt={product.name}
               className="w-full h-48 object-cover"
             />
