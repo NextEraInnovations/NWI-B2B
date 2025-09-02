@@ -20,9 +20,13 @@ import {
   Activity,
   Zap,
   Award,
-  RefreshCw
+  RefreshCw,
+  Download,
+  FileText
 } from 'lucide-react';
 import { WholesalerAnalytics } from '../../services/analyticsService';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface WholesalerAnalyticsModalProps {
   analytics: WholesalerAnalytics;
@@ -37,12 +41,247 @@ export function WholesalerAnalyticsModal({
 }: WholesalerAnalyticsModalProps) {
   const [activeSection, setActiveSection] = useState('overview');
   const [timeRange, setTimeRange] = useState('30d');
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!isOpen) return null;
 
   const formatCurrency = (amount: number) => `R${amount.toLocaleString()}`;
   const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
 
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    
+    try {
+      // Create a new PDF document
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPosition = margin;
+      
+      // Add header
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Wholesaler Analytics Report', margin, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${analytics.wholesalerName} - ${analytics.businessName}`, margin, yPosition);
+      yPosition += 8;
+      
+      pdf.setFontSize(10);
+      pdf.text(`Period: ${new Date(analytics.periodStart).toLocaleDateString()} - ${new Date(analytics.periodEnd).toLocaleDateString()}`, margin, yPosition);
+      pdf.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, pageWidth - 80, yPosition);
+      yPosition += 15;
+      
+      // Add line separator
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 10;
+      
+      // Sales Overview Section
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Sales Overview', margin, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      const salesData = [
+        ['Total Revenue', formatCurrency(analytics.sales.totalRevenue)],
+        ['Total Orders', analytics.sales.totalOrders.toString()],
+        ['Average Order Value', formatCurrency(analytics.sales.averageOrderValue)],
+        ['Unique Customers', analytics.sales.uniqueCustomers.toString()]
+      ];
+      
+      salesData.forEach(([label, value]) => {
+        pdf.text(`${label}:`, margin, yPosition);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(value, margin + 60, yPosition);
+        pdf.setFont('helvetica', 'normal');
+        yPosition += 6;
+      });
+      
+      yPosition += 10;
+      
+      // Customer Analytics Section
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Customer Analytics', margin, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      const customerData = [
+        ['Active Retailers', analytics.customers.activeRetailers.toString()],
+        ['New Retailers', analytics.customers.newRetailers.toString()],
+        ['Returning Retailers', analytics.customers.returningRetailers.toString()],
+        ['Customer Retention Rate', formatPercentage(analytics.customers.customerRetentionRate)]
+      ];
+      
+      customerData.forEach(([label, value]) => {
+        pdf.text(`${label}:`, margin, yPosition);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(value, margin + 60, yPosition);
+        pdf.setFont('helvetica', 'normal');
+        yPosition += 6;
+      });
+      
+      yPosition += 10;
+      
+      // Product Performance Section
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Product Performance', margin, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      const stockData = [
+        ['Out of Stock Products', analytics.products.stockAlerts.outOfStock.toString()],
+        ['Low Stock Products', analytics.products.stockAlerts.lowStock.toString()],
+        ['Total Categories', analytics.products.categoryPerformance.length.toString()]
+      ];
+      
+      stockData.forEach(([label, value]) => {
+        pdf.text(`${label}:`, margin, yPosition);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(value, margin + 60, yPosition);
+        pdf.setFont('helvetica', 'normal');
+        yPosition += 6;
+      });
+      
+      yPosition += 10;
+      
+      // Top Products Section
+      if (analytics.products.topProducts.length > 0) {
+        pdf.setFontSize(14);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Top Performing Products', margin, yPosition);
+        yPosition += 8;
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        analytics.products.topProducts.slice(0, 10).forEach((product, index) => {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+          
+          pdf.text(`${index + 1}. ${product.name}`, margin + 5, yPosition);
+          pdf.text(`${product.quantitySold} units`, margin + 80, yPosition);
+          pdf.text(formatCurrency(product.revenue), margin + 120, yPosition);
+          yPosition += 5;
+        });
+        
+        yPosition += 10;
+      }
+      
+      // Payment Analytics Section
+      if (yPosition > pageHeight - 50) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Payment Analytics', margin, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      const paymentData = [
+        ['Total Payments', formatCurrency(analytics.payments.totalPayments)],
+        ['Pending Payments', formatCurrency(analytics.payments.pendingPayments)],
+        ['Platform Commission', formatCurrency(analytics.payments.platformCommission)],
+        ['Net Revenue', formatCurrency(analytics.payments.totalPayments - analytics.payments.platformCommission)]
+      ];
+      
+      paymentData.forEach(([label, value]) => {
+        pdf.text(`${label}:`, margin, yPosition);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(value, margin + 60, yPosition);
+        pdf.setFont('helvetica', 'normal');
+        yPosition += 6;
+      });
+      
+      yPosition += 10;
+      
+      // Payment Methods Breakdown
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Payment Methods Breakdown', margin, yPosition);
+      yPosition += 8;
+      
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      
+      Object.entries(analytics.payments.paymentMethods).forEach(([method, data]) => {
+        const methodName = method === 'payfast' ? 'PayFast' :
+                          method === 'kazang' ? 'Kazang' :
+                          method === 'shop2shop' ? 'Shop2Shop' : method;
+        
+        pdf.text(`${methodName}:`, margin + 5, yPosition);
+        pdf.text(`${data.count} transactions`, margin + 50, yPosition);
+        pdf.text(formatCurrency(data.amount), margin + 100, yPosition);
+        yPosition += 5;
+      });
+      
+      yPosition += 10;
+      
+      // Promotions Section
+      if (yPosition > pageHeight - 40) {
+        pdf.addPage();
+        yPosition = margin;
+      }
+      
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Promotions Impact', margin, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      const promotionData = [
+        ['Active Promotions', analytics.promotions.activePromotions.toString()],
+        ['Promotion Orders', analytics.promotions.promotionOrders.toString()],
+        ['Promotion Revenue', formatCurrency(analytics.promotions.promotionRevenue)],
+        ['Revenue Impact', formatPercentage(analytics.promotions.promotionUplift)]
+      ];
+      
+      promotionData.forEach(([label, value]) => {
+        pdf.text(`${label}:`, margin, yPosition);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(value, margin + 60, yPosition);
+        pdf.setFont('helvetica', 'normal');
+        yPosition += 6;
+      });
+      
+      // Add footer
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'italic');
+      pdf.text('Generated by NWI B2B Platform', margin, pageHeight - 10);
+      pdf.text(`Page 1 of ${pdf.getNumberOfPages()}`, pageWidth - 40, pageHeight - 10);
+      
+      // Save the PDF
+      const fileName = `${analytics.wholesalerName.replace(/[^a-zA-Z0-9]/g, '_')}_Analytics_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+      console.log('✅ PDF exported successfully:', fileName);
+    } catch (error) {
+      console.error('❌ Error exporting PDF:', error);
+      alert('Failed to export PDF. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
   const sections = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'sales', label: 'Sales & Revenue', icon: DollarSign },
@@ -635,6 +874,23 @@ export function WholesalerAnalyticsModal({
             <div className="text-xs text-gray-500 bg-white px-3 py-2 rounded-lg">
               Period: {new Date(analytics.periodStart).toLocaleDateString()} - {new Date(analytics.periodEnd).toLocaleDateString()}
             </div>
+            <button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isExporting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Export PDF
+                </>
+              )}
+            </button>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
