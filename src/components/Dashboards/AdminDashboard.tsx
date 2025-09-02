@@ -52,8 +52,9 @@ import {
   CreditCard
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { User as UserType, PendingUser, Product, Order, Promotion, WholesalerAnalytics } from '../../types';
+import { User as UserType, PendingUser, Product, Order, Promotion } from '../../types';
 import { WholesalerAnalyticsModal } from '../Analytics/WholesalerAnalyticsModal';
+import { WholesalerAnalytics } from '../../services/analyticsService';
 
 interface AdminDashboardProps {
   activeTab: string;
