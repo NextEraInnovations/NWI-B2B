@@ -48,7 +48,8 @@ import {
   HardDrive,
   Wifi,
   Server,
-  Monitor
+  Monitor,
+  CreditCard
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { User as UserType, PendingUser, Product, Order, Promotion, WholesalerAnalytics } from '../../types';
@@ -219,9 +220,21 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     }
   };
 
-  const handleWholesalerClick = (wholesaler: UserType) => {
-    setSelectedWholesaler(wholesaler);
+  const handleWholesalerClick = async (wholesaler: UserType) => {
+    setAnalyticsLoading(true);
     setShowWholesalerAnalytics(true);
+    
+    try {
+      console.log('📊 Loading analytics for wholesaler:', wholesaler.name);
+      const analytics = await AnalyticsService.getWholesalerAnalytics(wholesaler.id);
+      setSelectedWholesalerAnalytics(analytics);
+    } catch (error) {
+      console.error('❌ Error loading wholesaler analytics:', error);
+      alert('Failed to load analytics data. Please try again.');
+      setShowWholesalerAnalytics(false);
+    } finally {
+      setAnalyticsLoading(false);
+    }
   };
 
   // Filter functions
@@ -285,23 +298,6 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     const reason = prompt('Please provide a reason for rejection:');
     if (reason) {
       dispatch({ type: 'REJECT_PROMOTION', payload: { id: promotionId, adminId: currentUser.id, reason } });
-    }
-  };
-
-  const handleWholesalerClick = async (wholesaler: User) => {
-    setAnalyticsLoading(true);
-    setShowWholesalerAnalytics(true);
-    
-    try {
-      console.log('📊 Loading analytics for wholesaler:', wholesaler.name);
-      const analytics = await AnalyticsService.getWholesalerAnalytics(wholesaler.id);
-      setSelectedWholesalerAnalytics(analytics);
-    } catch (error) {
-      console.error('❌ Error loading wholesaler analytics:', error);
-      alert('Failed to load analytics data. Please try again.');
-      setShowWholesalerAnalytics(false);
-    } finally {
-      setAnalyticsLoading(false);
     }
   };
 
@@ -464,6 +460,11 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               Reset to Defaults
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Wholesaler Analytics Access</h3>
         <p className="text-gray-600 mb-6">Click on any wholesaler's name in the Users section to view their detailed analytics.</p>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -781,10 +782,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       )}
 
       {/* Wholesaler Analytics Modal */}
-      {selectedWholesaler && (
-        <WholesalerAnalyticsModal
-          wholesaler={selectedWholesaler}
-          isOpen={showWholesalerAnalytics}
+      {showWholesalerAnalytics && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
           <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
             {analyticsLoading ? (
@@ -1136,22 +1134,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                         <h5 className="font-medium text-gray-900">{item.productName}</h5>
                         <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                       </div>
-                        {user.role === 'wholesaler' ? (
-                          <button
-                            onClick={() => handleWholesalerClick(user)}
-                            className="bg-purple-50 text-purple-600 px-3 py-1 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center gap-1"
-                          >
-                            <BarChart3 className="w-3 h-3" />
-                            Analytics
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setSelectedUser(user)}
-                            className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-                          >
-                            View
-                          </button>
-                        )}
+                      <div className="text-right">
                         <p className="font-semibold text-gray-900">R{item.total.toLocaleString()}</p>
                         <p className="text-sm text-gray-500">R{item.price} each</p>
                       </div>
