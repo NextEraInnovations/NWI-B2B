@@ -147,18 +147,6 @@ export interface Notification {
   expiresAt?: string;
 }
 
-export interface WholesalerAnalytics {
-  wholesalerId: string;
-  wholesalerName: string;
-  businessName: string;
-  totalRevenue: number;
-  totalOrders: number;
-  totalProducts: number;
-  activePromotions: number;
-  averageOrderValue: number;
-  monthlyRevenue: { month: string; revenue: number }[];
-  ordersByStatus: { status: string; count: number }[];
-  topProducts: { name: string; sales: number; revenue: number }[];
   customerCount: number;
   repeatCustomerRate: number;
   stockTurnover: number;
