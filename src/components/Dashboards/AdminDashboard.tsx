@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AnalyticsService, WholesalerAnalytics } from '../../services/analyticsService';
 import { 
   Users, 
   Package, 
@@ -74,6 +75,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [selectedWholesaler, setSelectedWholesaler] = useState<UserType | null>(null);
   const [showWholesalerAnalytics, setShowWholesalerAnalytics] = useState(false);
+  const [selectedWholesalerAnalytics, setSelectedWholesalerAnalytics] = useState<WholesalerAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   const currentUser = state.currentUser!;
 
@@ -285,6 +288,23 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     }
   };
 
+  const handleWholesalerClick = async (wholesaler: User) => {
+    setAnalyticsLoading(true);
+    setShowWholesalerAnalytics(true);
+    
+    try {
+      console.log('📊 Loading analytics for wholesaler:', wholesaler.name);
+      const analytics = await AnalyticsService.getWholesalerAnalytics(wholesaler.id);
+      setSelectedWholesalerAnalytics(analytics);
+    } catch (error) {
+      console.error('❌ Error loading wholesaler analytics:', error);
+      alert('Failed to load analytics data. Please try again.');
+      setShowWholesalerAnalytics(false);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
   const renderOverview = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -444,27 +464,36 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               Reset to Defaults
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Activity</h3>
-        <div className="space-y-3">
-          {state.orders.slice(0, 5).map((order) => (
-            <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="bg-blue-100 p-2 rounded-lg">
-                  <ShoppingCart className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">New Order #{order.id}</p>
-                  <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
-              <span className="font-bold text-green-600">R{order.total.toLocaleString()}</span>
+        <p className="text-gray-600 mb-6">Click on any wholesaler's name in the Users section to view their detailed analytics.</p>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h4 className="font-semibold text-blue-900 mb-2">Analytics Features Include:</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4" />
+              Sales & Revenue Analytics
             </div>
-          ))}
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Customer Insights & Retention
+            </div>
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Product Performance Metrics
+            </div>
+            <div className="flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Payment & Financial Analytics
+            </div>
+            <div className="flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Marketing & Promotion Impact
+            </div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Growth Trends & Forecasting
+            </div>
+          </div>
         </div>
       </div>
 
@@ -756,15 +785,42 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         <WholesalerAnalyticsModal
           wholesaler={selectedWholesaler}
           isOpen={showWholesalerAnalytics}
-          onClose={() => {
-            setShowWholesalerAnalytics(false);
-            setSelectedWholesaler(null);
-          }}
-          products={state.products}
-          orders={state.orders}
-          promotions={state.promotions}
-          allUsers={state.users}
-        />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+            {analyticsLoading ? (
+              <div className="flex items-center justify-center p-20">
+                <div className="text-center">
+                  <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+                  <p className="text-lg font-medium text-gray-600">Loading Analytics...</p>
+                  <p className="text-sm text-gray-500 mt-2">Calculating comprehensive metrics</p>
+                </div>
+              </div>
+            ) : selectedWholesalerAnalytics ? (
+              <WholesalerAnalyticsModal
+                analytics={selectedWholesalerAnalytics}
+                isOpen={showWholesalerAnalytics}
+                onClose={() => {
+                  setShowWholesalerAnalytics(false);
+                  setSelectedWholesalerAnalytics(null);
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-center p-20">
+                <div className="text-center">
+                  <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                  <p className="text-lg font-medium text-gray-600">Failed to Load Analytics</p>
+                  <p className="text-sm text-gray-500 mt-2">Please try again later</p>
+                  <button
+                    onClick={() => setShowWholesalerAnalytics(false)}
+                    className="mt-4 bg-gray-100 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1080,7 +1136,22 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                         <h5 className="font-medium text-gray-900">{item.productName}</h5>
                         <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                       </div>
-                      <div className="text-right">
+                        {user.role === 'wholesaler' ? (
+                          <button
+                            onClick={() => handleWholesalerClick(user)}
+                            className="bg-purple-50 text-purple-600 px-3 py-1 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium flex items-center gap-1"
+                          >
+                            <BarChart3 className="w-3 h-3" />
+                            Analytics
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setSelectedUser(user)}
+                            className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                          >
+                            View
+                          </button>
+                        )}
                         <p className="font-semibold text-gray-900">R{item.total.toLocaleString()}</p>
                         <p className="text-sm text-gray-500">R{item.price} each</p>
                       </div>
