@@ -51,6 +51,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { User as UserType, PendingUser, Product, Order, Promotion, WholesalerAnalytics } from '../../types';
+import { WholesalerAnalyticsModal } from '../Analytics/WholesalerAnalyticsModal';
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -71,6 +72,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [announcementText, setAnnouncementText] = useState('');
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [selectedWholesaler, setSelectedWholesaler] = useState<UserType | null>(null);
+  const [showWholesalerAnalytics, setShowWholesalerAnalytics] = useState(false);
 
   const currentUser = state.currentUser!;
 
@@ -211,6 +214,11 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setSelectedUsers([]);
       setShowBulkActions(false);
     }
+  };
+
+  const handleWholesalerClick = (wholesaler: UserType) => {
+    setSelectedWholesaler(wholesaler);
+    setShowWholesalerAnalytics(true);
   };
 
   // Filter functions
@@ -588,7 +596,16 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-bold text-gray-900">{user.name}</h3>
+                  <h3 
+                    className={`text-lg font-bold ${
+                      user.role === 'wholesaler' 
+                        ? 'text-blue-600 hover:text-blue-800 cursor-pointer hover:underline' 
+                        : 'text-gray-900'
+                    }`}
+                    onClick={() => user.role === 'wholesaler' && handleWholesalerClick(user)}
+                  >
+                    {user.name}
+                  </h3>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                     user.role === 'wholesaler' ? 'bg-green-100 text-green-800' :
                     user.role === 'retailer' ? 'bg-orange-100 text-orange-800' :
@@ -632,6 +649,15 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                   <Eye className="w-4 h-4" />
                   View
                 </button>
+                {user.role === 'wholesaler' && (
+                  <button
+                    onClick={() => handleWholesalerClick(user)}
+                    className="bg-purple-50 text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Analytics
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -723,6 +749,22 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Wholesaler Analytics Modal */}
+      {selectedWholesaler && (
+        <WholesalerAnalyticsModal
+          wholesaler={selectedWholesaler}
+          isOpen={showWholesalerAnalytics}
+          onClose={() => {
+            setShowWholesalerAnalytics(false);
+            setSelectedWholesaler(null);
+          }}
+          products={state.products}
+          orders={state.orders}
+          promotions={state.promotions}
+          allUsers={state.users}
+        />
       )}
     </div>
   );
