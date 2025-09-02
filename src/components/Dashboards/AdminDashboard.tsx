@@ -54,7 +54,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { User as UserType, PendingUser, Product, Order, Promotion } from '../../types';
 import { WholesalerAnalyticsModal } from '../Analytics/WholesalerAnalyticsModal';
-import { WholesalerAnalytics } from '../../services/analyticsService';
+import { WholesalerAnalytics as WholesalerAnalyticsType } from '../../services/analyticsService';
 
 interface AdminDashboardProps {
   activeTab: string;
