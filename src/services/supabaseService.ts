@@ -565,7 +565,11 @@ export class SupabaseService {
         phone: pendingUser.phone,
         address: pendingUser.address,
         registration_reason: pendingUser.registrationReason,
-        documents: pendingUser.documents
+        documents: pendingUser.documents,
+        kazang_details: pendingUser.kazangDetails,
+        shop2shop_details: pendingUser.shop2shopDetails,
+        payfast_details: pendingUser.payfastDetails,
+        password_hash: pendingUser.passwordHash
       }])
       .select()
       .single();
@@ -804,7 +808,11 @@ export class SupabaseService {
       address: row.address,
       registrationReason: row.registration_reason,
       submittedAt: row.submitted_at,
-      documents: row.documents || []
+      documents: row.documents || [],
+      kazangDetails: row.kazang_details,
+      shop2shopDetails: row.shop2shop_details,
+      payfastDetails: row.payfast_details,
+      passwordHash: row.password_hash
     };
   }
 }

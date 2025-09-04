@@ -73,6 +73,10 @@ export interface PendingUser {
   registrationReason: string;
   submittedAt: string;
   documents?: string[];
+  kazangDetails?: string;
+  shop2shopDetails?: string;
+  payfastDetails?: string;
+  passwordHash?: string;
 }
 
 export interface Promotion {

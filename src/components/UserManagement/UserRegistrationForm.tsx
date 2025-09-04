@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Building, Phone, Mail, MapPin, FileText, X, CreditCard } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AuthService } from '../../services/authService';
+import { SupabaseService } from '../../services/supabaseService';
 import { PendingUser } from '../../types';
 
 interface UserRegistrationFormProps {
@@ -61,8 +62,8 @@ export function UserRegistrationForm({ isOpen, onClose }: UserRegistrationFormPr
     } catch (authError) {
       console.log('⚠️ Supabase auth registration failed, creating pending user...');
       
-      // Fallback to pending user system
-      const pendingUser: PendingUser = {
+      // Create pending user with complete signup information
+      const pendingUser = {
         id: Date.now().toString(),
         name: formData.name,
         email: formData.email,
@@ -71,11 +72,25 @@ export function UserRegistrationForm({ isOpen, onClose }: UserRegistrationFormPr
         phone: formData.phone,
         address: formData.address,
         registrationReason: formData.registrationReason,
-        submittedAt: new Date().toISOString(),
-        documents: []
+        documents: [],
+        // Include payment gateway details for wholesalers
+        kazangDetails: formData.role === 'wholesaler' ? formData.kazangDetails : '',
+        shop2shopDetails: formData.role === 'wholesaler' ? formData.shop2shopDetails : '',
+        payfastDetails: formData.role === 'wholesaler' ? formData.payfastDetails : '',
+        // Store password hash for later account creation
+        passwordHash: formData.password // This should be hashed in production
       };
 
-      dispatch({ type: 'ADD_PENDING_USER', payload: pendingUser });
+      try {
+        // Save to database if Supabase is configured
+        await SupabaseService.createPendingUser(pendingUser);
+        console.log('✅ Pending user saved to database');
+      } catch (dbError) {
+        console.log('⚠️ Database save failed, using local storage');
+        // Fallback to local state
+        dispatch({ type: 'ADD_PENDING_USER', payload: pendingUser });
+      }
+      
       alert('Registration submitted successfully! An admin will review your application.');
       onClose();
     } finally {

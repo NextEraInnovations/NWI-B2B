@@ -135,7 +135,11 @@ export function useSupabaseData() {
     address: row.address,
     registrationReason: row.registration_reason,
     submittedAt: row.submitted_at,
-    documents: row.documents || []
+    documents: row.documents || [],
+    kazangDetails: row.kazang_details,
+    shop2shopDetails: row.shop2shop_details,
+    payfastDetails: row.payfast_details,
+    passwordHash: row.password_hash
   });
 
   // Real-time event handlers
