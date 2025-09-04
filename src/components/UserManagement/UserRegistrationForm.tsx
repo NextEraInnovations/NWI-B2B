@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Building, Phone, Mail, MapPin, FileText, X } from 'lucide-react';
+import { User, Building, Phone, Mail, MapPin, FileText, X, CreditCard } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AuthService } from '../../services/authService';
 import { PendingUser } from '../../types';
@@ -20,7 +20,10 @@ export function UserRegistrationForm({ isOpen, onClose }: UserRegistrationFormPr
     businessName: '',
     phone: '',
     address: '',
-    registrationReason: ''
+    registrationReason: '',
+    kazangDetails: '',
+    shop2shopDetails: '',
+    payfastDetails: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +92,10 @@ export function UserRegistrationForm({ isOpen, onClose }: UserRegistrationFormPr
       businessName: '',
       phone: '',
       address: '',
-      registrationReason: ''
+      registrationReason: '',
+      kazangDetails: '',
+      shop2shopDetails: '',
+      payfastDetails: ''
     });
   };
 
@@ -221,6 +227,63 @@ export function UserRegistrationForm({ isOpen, onClose }: UserRegistrationFormPr
               required
             />
           </div>
+
+          {/* Payment Gateway Fields - Only show for wholesalers */}
+          {formData.role === 'wholesaler' && (
+            <div className="space-y-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <h4 className="text-sm font-semibold text-blue-900 mb-3">
+                Payment Gateway Information
+              </h4>
+              <p className="text-xs text-blue-700 mb-4">
+                Please provide your payment gateway details to receive payments from retailers.
+              </p>
+              
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  <CreditCard className="w-4 h-4 inline mr-2" />
+                  Kazang Account Details
+                </label>
+                <input
+                  type="text"
+                  value={formData.kazangDetails}
+                  onChange={(e) => setFormData({...formData, kazangDetails: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Enter your Kazang merchant ID or account details"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  <CreditCard className="w-4 h-4 inline mr-2" />
+                  Shop2Shop Account Details
+                </label>
+                <input
+                  type="text"
+                  value={formData.shop2shopDetails}
+                  onChange={(e) => setFormData({...formData, shop2shopDetails: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Enter your Shop2Shop merchant ID or account details"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                  <CreditCard className="w-4 h-4 inline mr-2" />
+                  PayFast Account Details
+                </label>
+                <input
+                  type="text"
+                  value={formData.payfastDetails}
+                  onChange={(e) => setFormData({...formData, payfastDetails: e.target.value})}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-200 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  placeholder="Enter your PayFast merchant ID and key"
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
